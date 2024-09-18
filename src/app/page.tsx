@@ -1,11 +1,8 @@
-import Image from "next/image";
-import DashBoard from "../../Components/DashBoard";
 
 export default function Home() {
   return (
    <main> 
- <h1> This is Dashboard</h1>
- <DashBoard/> 
+ <h1> This is Landing Page</h1>
    </main>
   );
 }
