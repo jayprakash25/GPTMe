@@ -1,6 +1,15 @@
-import  { model, Schema } from "mongoose";
+import  mongoose, {  Schema } from "mongoose";
 
-const userSchema = new Schema({
+interface User extends Document {
+    googleId: string;
+    name: string;
+    email: string;
+    picture?: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+
+const userSchema = new Schema<User>({
     googleId: { type: String, required: true },
     name: { type: String, required: true },
     email: { type: String, required: true },
@@ -9,6 +18,6 @@ const userSchema = new Schema({
     updatedAt: { type: Date, default: Date.now },
     });
 
-const userModel = model('User', userSchema);
+const userModel = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default userModel;

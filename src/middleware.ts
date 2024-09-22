@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
 
   } else {
     // Redirect unauthenticated users away from protected pages
-    if (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/')) {
+    if (url.pathname.startsWith('/dashboard')) {
       return NextResponse.redirect(new URL('/sign-in', request.url));
     }
   }
