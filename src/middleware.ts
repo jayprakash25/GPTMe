@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import  { NextRequest } from "next/server";
-export { default } from "next-auth/middleware";
+import  { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server"; 
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
@@ -18,13 +17,17 @@ export async function middleware(request: NextRequest) {
     if (url.pathname.startsWith('/dashboard')) {
       return NextResponse.redirect(new URL('/sign-in', request.url));
     }
+
   }
 
+  if (!token && (url.pathname.startsWith("/dashboard"))) {
+    return NextResponse.redirect(new URL("/sign-in", request.url));
+  }
 
-  return NextResponse.next()
+  return NextResponse.next();
 }
 
-// See "Matching Paths" 
+// See "Matching Paths"
 export const config = {
-  matcher: ["/sign-in", "/", '/dashboard'],
+  matcher: ["/sign-in", "/dashboard/"],
 };
