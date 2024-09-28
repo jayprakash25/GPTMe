@@ -22,24 +22,32 @@ const openai = new OpenAI({
 export async function getKeyInfoFromResponse(responses: Response[]): Promise<ExtractedInfo> {
   const extractedInfo: ExtractedInfo = {};
 
-  for (const response of responses) {
-    const prompt = `Extract key info from this response to the question: "${response.question}". Response: "${response.response}"`;
-    
-    try {
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 150
+  const systemPrompt = "You are an AI assistant helping to gather key information from the user to create a digital version of a user.";
+
+  const batchPrompt = responses.map(response => `Extract key info from this response to the question: "${response.question}". Response: "${response.response}"`
+  ).join("\n\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: batchPrompt }
+      ],
+      max_tokens: 1000
+    });
+    const completionContent = completion.choices[0]?.message.content?.trim();
+
+    if (completionContent) {
+      // Assuming a simple split for extracting info from the batch completion
+      const results = completionContent.split("\n\n");
+      results.forEach((info, index) => {
+        const questionId = responses[index].questionId;
+        extractedInfo[questionId] = info.trim();
       });
-
-      const info = completion.choices[0]?.message.content?.trim();
-
-      if (info) {
-        extractedInfo[response.questionId] = info;
-      }
-    } catch (error) {
-      console.error(`Error processing response for question ${response.questionId}:`, error);
     }
+  } catch (error) {
+    console.error(`Error processing batch responses:`, error);
   }
 
   return extractedInfo;
