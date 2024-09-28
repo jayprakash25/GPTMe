@@ -13,33 +13,33 @@ interface responseType {
   response: string;
 }
 
-export default async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const user: User = session?.user;
+export  async function POST(req: Request) {
+  // const session = await getServerSession(authOptions);
+  // const user: User = session?.user;
 
-  if (!session || !user) {
-    return NextResponse.json({
-      statusCode: 401,
-      message: "Unauthorized",
-    });
-  }
+  // if (!session || !user) {
+  //   return NextResponse.json({
+  //     statusCode: 401,
+  //     message: "Unauthorized",
+  //   });
+  // }
 
   await dbConnection();
 
   try {
     if (req.method === "POST") {
-      const { userId, responses } = await req.json();
+      const { responses } = await req.json();
 
-      if (!userId || !responses) {
-        return NextResponse.json({
-          statusCode: 400,
-          message: "Invalid input: userId and responses are required",
-        });
-      }
+      // if (!userId || !responses) {
+      //   return NextResponse.json({
+      //     statusCode: 400,
+      //     message: "Invalid input: userId and responses are required",
+      //   });
+      // }
 
       //save response to conversation document
       const conversation = new ConversationModel({
-        userId,
+        userId: "123",
         status: "in_progress",
         responses: responses.map((resp: responseType) => ({
           questionId: resp.questionId,
@@ -54,7 +54,7 @@ export default async function POST(req: Request) {
 
       conversation.status =
         followUpQuestions.length === 0 ? "completed" : "in_progress";
-      await conversation.save();
+      // await conversation.save();
 
       const result = { keyInfoFromResponse, followUpQuestions };
 
@@ -64,9 +64,13 @@ export default async function POST(req: Request) {
         data: result,
       });
 
-      //   return { keyInfoFromResponse, followUpQuestions}
+      // return { keyInfoFromResponse, followUpQuestions}
     }
   } catch (error) {
     console.log(error);
+    return NextResponse.json({
+      statusCode: 500,
+      message: "Internal server error",
+    });
   }
 }

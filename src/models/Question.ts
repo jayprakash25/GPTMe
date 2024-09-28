@@ -1,4 +1,4 @@
-import  { Schema, model } from 'mongoose';
+import  mongoose, { Schema, model } from 'mongoose';
 
 const questionSchema = new Schema({
   text: { type: String, required: true },
@@ -9,6 +9,6 @@ const questionSchema = new Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-const QuestionModel = model('Question', questionSchema);
+const QuestionModel = mongoose.models.Question || model('Question', questionSchema);
 
 export default QuestionModel;
