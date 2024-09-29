@@ -5,7 +5,7 @@ const conversationSchema = new Schema({
   status: { type: String, enum: ['in_progress', 'completed'], required: true },
   responses: [
     {
-      questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', required: true },
+      question: { type: String, required: true },
       response: { type: String, required: true },
       createdAt: { type: Date, default: Date.now },
     },

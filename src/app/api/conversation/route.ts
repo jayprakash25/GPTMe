@@ -9,7 +9,7 @@ import {
 } from "@/services/gptService";
 
 interface responseType {
-  questionId: string;
+  question: string;
   response: string;
 }
 
@@ -42,7 +42,7 @@ export  async function POST(req: Request) {
         userId: "123",
         status: "in_progress",
         responses: responses.map((resp: responseType) => ({
-          questionId: resp.questionId,
+          question: resp.question,
           response: resp.response,
         })),
       });

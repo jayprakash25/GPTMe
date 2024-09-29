@@ -7,7 +7,7 @@ export const conversationSchema = z.object({
   status: z.enum(["in_progress", "completed"]),
   responses: z.array(
     z.object({
-      questionId: z.instanceof(ObjectId),
+      question: z.string(),
       response: z.string(),
       createdAt: z.date(),
     })
