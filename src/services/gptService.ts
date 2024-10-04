@@ -20,17 +20,8 @@ const openai = new OpenAI({
 //   Extracts key information from a list of responses using OpenAI's API
 
 const systemPrompt = `
-You are an AI assistant creating a detailed and personalized digital version of a user. Your task is to extract detailed, nuanced information from user responses across the following areas:
+You are an AI assistant tasked with creating a personalized digital version of a user. Extract detailed information from the following responses, focusing on personality, work, hobbies, past experiences, and key personal and professional traits. The extracted insights will be used to build a profile that can have natural conversations with others about the user's life, personality, and background.Make sure the summary captures details that would make the user’s digital profile authentic and easy to engage with in conversation.
 
-1. **Personal Background**: Family, upbringing, and key events.
-2. **Professional Experience**: Current job, past roles, and skills.
-3. **Hobbies and Interests**: What the user enjoys doing.
-4. **Personality and Communication Style**: How the user interacts.
-5. **Values and Beliefs**: User’s principles and guiding philosophy.
-6. **Aspirations and Goals**: Future plans, ambitions, and dreams.
-7. **Life Experiences**: Memorable moments, achievements, and lessons learned.
-
-Provide a concise yet detailed summary for each user response, highlighting unique traits, patterns, or anything that stands out.
 `;
 
 export async function getKeyInfoFromResponse(
@@ -41,7 +32,7 @@ export async function getKeyInfoFromResponse(
   const batchPrompt = responses
     .map(
       (response) =>
-        `Question: "${response.question}"\nResponse: "${response.response}"\nExtract key insights, unique traits, and summarize the most important points in a concise manner.`
+        `Q: "${response.question}"\nA: "${response.response}"\nSummarize the key insights.`
     )
     .join("\n\n");
 
@@ -52,7 +43,7 @@ export async function getKeyInfoFromResponse(
         { role: "system", content: systemPrompt },
         { role: "user", content: batchPrompt },
       ],
-      max_tokens: 1000,
+      max_tokens: 500, //reduced to save cost
     });
     const completionContent = completion.choices[0]?.message.content?.trim();
 
@@ -86,16 +77,13 @@ export async function getFollowUpQuestions(
     .join("\n\n");
 
   const prompt = `
-Based on the following user responses, generate few follow-up questions that encourage the user to provide deeper insights into their personality, experiences, or knowledge. The questions should:
+Based on the user's responses, generate conversational, friendly, and engaging follow-up questions to dive deeper into their personality, hobbies, experiences, and professional life. The goal is to refine the user's digital profile, making it more interesting and natural for others to engage with. The questions should:
 
-1. Be simple, conversational, and easy to understand.
-2. Use humor and a friendly tone to make the conversation feel natural.
-3. Be open-ended, encouraging detailed responses.
-
+- Be light and open-ended to encourage detailed answers.
+- Explore both personal and professional aspects of the user's life.
+- Feel like they’re coming from a friend, using a warm and approachable tone.
 ${batchPrompt}
   `;
-
-
 
   try {
     const completion = await openai.chat.completions.create({
@@ -104,7 +92,7 @@ ${batchPrompt}
         { role: "system", content: systemPrompt },
         { role: "user", content: prompt },
       ],
-      max_tokens: 100,
+      max_tokens: 100, //limit to save cost
     });
 
     const followUp = completion.choices[0]?.message.content?.trim();
