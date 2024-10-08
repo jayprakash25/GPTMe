@@ -51,7 +51,7 @@ const data = {
   ],
 };
 
-let messages: OpenAI.ChatCompletionMessageParam[] = [
+const messages: OpenAI.ChatCompletionMessageParam[] = [
   {
     role: "system",
     content: `You are ${data.name} and someone is talking to you now. You have to behave as if you are ${data.name}, and some of your information is: ${JSON.stringify(
