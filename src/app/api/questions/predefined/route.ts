@@ -13,25 +13,21 @@ const predefinedQuestions = [
     id: 2,
     text: 'What do you do for a living?',
     type: 'predefined',
-    category: 'career',
   },
   {
     id: 3,
     text: 'What are your main interests or hobbies?',
     type: 'predefined',
-    category: 'interests',
   },
   {
     id: 4,
     text: 'How would you describe your personality?',
     type: 'predefined',
-    category: 'personal',
   },
   {
     id: 5,
     text: 'What kind of tone do you prefer in communication?',
     type: 'predefined',
-    category: 'preferences',
   },
 ];
 
