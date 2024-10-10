@@ -7,7 +7,7 @@ interface Response {
   response: string;
 }
 
-// Define the structure for extracted info
+// Define the structure for extracted information
 interface ExtractedInfo {
   [question: string]: string;
 }
@@ -17,32 +17,26 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// System prompt for guiding the GPT
 const systemPrompt = `
-You are an AI assistant tasked with creating a personalized digital version of a user. Extract detailed information from the following responses, focusing on personality, work, hobbies, past experiences, and key personal and professional traits. The extracted insights will be used to build a profile that can have natural conversations with others about the user's life, personality, and background. Make sure the summary captures details that would make the user's digital profile authentic and easy to engage with in conversation.
+You are an AI assistant tasked with creating a personalized digital version of a user. Begin by saying: 
+"Hey, get ready to create your own custom GPT! I'm here to help craft a digital version of you. I'll ask you some questions about your life, work, experiences, and interests. Let's start with your name!" 
+After the user responds, continue asking questions related to their personal background, education, professional experiences, hobbies, and personality traits. Stop asking questions when the user says, "That's it" or "I'm done."
 `;
 
-export async function getKeyInfoFromResponse(
-  responses: Response[]
-): Promise<ExtractedInfo> {
+// Extract key information from user responses
+export async function getKeyInfoFromResponse(responses: Response[]): Promise<ExtractedInfo> {
   return await processResponses(responses);
 }
 
-// export async function getKeyInfoFromFollowUpResponses(
-//   responses: Response[]
-// ): Promise<ExtractedInfo> {
-//   return await processResponses(responses, "followUp");
-// }
-
-async function processResponses(
-  responses: Response[],
-  // type: "initial" | "followUp"
-): Promise<ExtractedInfo> {
+// Process responses and extract key insights
+async function processResponses(responses: Response[]): Promise<ExtractedInfo> {
   const extractedInfo: ExtractedInfo = {};
 
+  // Create a prompt with each question and response for summarization
   const batchPrompt = responses
     .map(
-      (response) =>
-        `Q: "${response.question}"\nA: "${response.response}"\nSummarize the key insights.`
+      (response) => `Q: "${response.question}"\nA: "${response.response}"\nSummarize the key insights.`
     )
     .join("\n\n");
 
@@ -51,7 +45,7 @@ Extract and summarize key information from the following responses:
 
 ${batchPrompt}
 
-Provide a concise summary for each response, focusing on details that would make the user's digital profile more authentic and engaging.
+Provide a concise summary for each response to build a personalized digital profile of the user.
 `;
 
   try {
@@ -63,49 +57,41 @@ Provide a concise summary for each response, focusing on details that would make
       ],
       max_tokens: 500,
     });
-    const completionContent = completion.choices[0]?.message.content?.trim();
 
+    const completionContent = completion.choices[0]?.message.content?.trim();
+    
     if (completionContent) {
       const results = completionContent.split("\n\n");
-      
       results.forEach((info, index) => {
         const question = responses[index]?.question;
         if (question) {
-          extractedInfo[question] = info.trim(); // Store the info using the question as the key
-        } else {
-          console.warn(`No question found for index ${index}`);
+          extractedInfo[question] = info.trim();
         }
       });
     }
   } catch (error) {
-    console.error(`Error processing  responses:`, error);
+    console.error(`Error processing responses:`, error);
   }
 
   return extractedInfo;
 }
 
-export async function getFollowUpQuestions(
-  responses: Response[]
-): Promise<string[]> {
+// Generate follow-up questions based on the user’s responses
+export async function getFollowUpQuestions(responses: Response[]): Promise<string[]> {
   const followUpQuestions: string[] = [];
 
   const batchPrompt = responses
     .map(
-      (response) =>
-        `Question: "${response.question}"\nResponse: "${response.response}"`
+      (response) => `Question: "${response.question}"\nResponse: "${response.response}"`
     )
     .join("\n\n");
 
   const prompt = `
-Based on the user's responses, generate conversational, friendly, and engaging follow-up questions to dive deeper into their personality, hobbies, experiences, and professional life. The goal is to refine the user's digital profile, making it more interesting and natural for others to engage with. The questions should:
-
-- Be light and open-ended to encourage detailed answers.
-- Explore both personal and professional aspects of the user's life.
-- Feel like they're coming from a friend, using a warm and approachable tone.
+Based on the user's responses, generate friendly follow-up questions to explore their personality, hobbies, and professional life further. The questions should be light and open-ended to encourage more detail. 
 
 ${batchPrompt}
 
-Generate upto a few follow-up questions until you can get to know the user better enough to represent him.
+Generate a few follow-up questions to refine the user's digital profile.
 `;
 
   try {
@@ -119,7 +105,7 @@ Generate upto a few follow-up questions until you can get to know the user bette
     });
 
     const followUp = completion.choices[0]?.message.content?.trim();
-
+    
     if (followUp) {
       followUpQuestions.push(
         ...followUp.split("\n").filter((q) => q.trim() !== "")
@@ -132,23 +118,20 @@ Generate upto a few follow-up questions until you can get to know the user bette
   return followUpQuestions;
 }
 
-export async function createGptConfiguration(
-  allKeyInfo: ExtractedInfo
-): Promise<object> {
+// Create GPT configuration based on the extracted key information
+export async function createGptConfiguration(allKeyInfo: ExtractedInfo): Promise<object> {
   const prompt = `
-Based on the following extracted key information about a user, create a configuration for a GPT model that can accurately represent this user in conversations. The configuration should include:
+Based on the following user information, create a configuration for a GPT model to represent the user in conversations. The configuration should include:
 
 1. A brief description of the user's personality, background, and key traits.
-2. Important topics or areas of expertise the GPT should be knowledgeable about.
+2. Important areas of expertise or interests.
 3. The user's communication style and tone.
-4. Any specific instructions or guidelines for the GPT to follow when engaging in conversations as this user.
+4. Any specific instructions for the GPT when engaging in conversations as this user.
 
 User Information:
 ${Object.entries(allKeyInfo)
   .map(([key, value]) => `${key}: ${value}`)
   .join("\n")}
-
-Provide the configuration in a structured format that can be easily converted to a GPT prompt.
 `;
 
   try {
@@ -162,7 +145,7 @@ Provide the configuration in a structured format that can be easily converted to
     });
 
     const gptConfig = completion.choices[0]?.message.content?.trim();
-
+    
     if (gptConfig) {
       return {
         model: "gpt-3.5-turbo",
