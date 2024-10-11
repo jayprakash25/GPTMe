@@ -43,9 +43,19 @@ export async function generateResponse(messages: Messages[]): Promise<string>{
 
 export async function extractKeyInfo(messages: { role: string; content: string }[]): Promise<string> {
   const prompt = `
-    Based on the following conversation, extract key information about the user to create a digital profile. Provide a concise summary of their personality, background, interests, and experiences.
+    Summarize the user's responses into these sections:
 
+    1. Background: Age, job, key experiences, family, education.
+    2. Personality: Traits, communication style, values.
+    3. Interests: Hobbies, skills, favorite activities.
+    4. Professional: Current role, achievements, skills.
+    5. Goals: Short-term, long-term, growth areas.
+
+    Note "unknown" if details are missing. Use markdown headers.
+
+    Conversation:
     ${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}
+
   `;
 
   try {

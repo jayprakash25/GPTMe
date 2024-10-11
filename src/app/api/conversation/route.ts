@@ -4,7 +4,7 @@ import dbConnection from "@/lib/dbConnect";
 import ConversationModel from "@/models/Conversation";
 import { NextResponse } from "next/server";
 import {
-  createGptConfiguration,
+  // createGptConfiguration,
   generateResponse,
   extractKeyInfo,
 } from "@/services/gptService";
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         conversation.extractedInfo = await extractKeyInfo(conversation.messages);
 
         // Generate GPT configuration
-        conversation.gptConfiguration = await createGptConfiguration(conversation.extractedInfo);
+        // conversation.gptConfiguration = await createGptConfiguration(conversation.extractedInfo);
       }
     }
 
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
         aiResponse,
         status: conversation.status,
         extractedInfo: conversation.status === "completed" ? conversation.extractedInfo : undefined,
-        gptConfiguration: conversation.status === "completed" ? conversation.gptConfiguration : undefined,
+        // gptConfiguration: conversation.status === "completed" ? conversation.gptConfiguration : undefined,
       },
     });
   } catch (error) {
