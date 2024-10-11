@@ -1,11 +1,6 @@
 import OpenAI from "openai";
 
-// Define types for the response object
-interface Response {
-  questionId: string;
-  question: string;
-  response: string;
-}
+
 
 // Define the structure for extracted information
 interface ExtractedInfo {
@@ -21,102 +16,53 @@ const openai = new OpenAI({
 const systemPrompt = `
 You are an AI assistant tasked with creating a personalized digital version of a user. Begin by saying: 
 "Hey, get ready to create your own custom GPT! I'm here to help craft a digital version of you. I'll ask you some questions about your life, work, experiences, and interests. Let's start with your name!" 
-After the user responds, continue asking questions related to their personal background, education, professional experiences, hobbies, and personality traits. Stop asking questions when the user says, "That's it" or "I'm done."
+After the user responds, continue asking questions related to their personal background, education, professional experiences, hobbies, and personality traits. Stop asking questions when the user says, "That's it" or "I'm done. When the user's digital version is complete send the final message that includes the text your digital version is now created"
 `;
 
-// Extract key information from user responses
-export async function getKeyInfoFromResponse(responses: Response[]): Promise<ExtractedInfo> {
-  return await processResponses(responses);
+interface Messages {
+  role: "user" | "assistant" | "system";
+  content: string;
+  name?: string; // Optional, only needed if using function-based messages
 }
 
-// Process responses and extract key insights
-async function processResponses(responses: Response[]): Promise<ExtractedInfo> {
-  const extractedInfo: ExtractedInfo = {};
 
-  // Create a prompt with each question and response for summarization
-  const batchPrompt = responses
-    .map(
-      (response) => `Q: "${response.question}"\nA: "${response.response}"\nSummarize the key insights.`
-    )
-    .join("\n\n");
+export async function generateResponse(messages: Messages[]): Promise<string>{
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{role: "system", content: systemPrompt}, ...messages],
+      max_tokens: 150,
+    })
 
+    return completion.choices[0].message?.content?.trim() || "";
+  } catch (error) {
+    console.log("Error generating response:", error);
+    throw error;
+  }
+}
+
+export async function extractKeyInfo(messages: { role: string; content: string }[]): Promise<string> {
   const prompt = `
-Extract and summarize key information from the following responses:
+    Based on the following conversation, extract key information about the user to create a digital profile. Provide a concise summary of their personality, background, interests, and experiences.
 
-${batchPrompt}
-
-Provide a concise summary for each response to build a personalized digital profile of the user.
-`;
+    ${messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')}
+  `;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
+      messages: [{ role: "user", content: prompt }],
       max_tokens: 500,
     });
 
-    const completionContent = completion.choices[0]?.message.content?.trim();
-    
-    if (completionContent) {
-      const results = completionContent.split("\n\n");
-      results.forEach((info, index) => {
-        const question = responses[index]?.question;
-        if (question) {
-          extractedInfo[question] = info.trim();
-        }
-      });
-    }
+    return completion.choices[0]?.message?.content?.trim() || "";
   } catch (error) {
-    console.error(`Error processing responses:`, error);
+    console.error("Error extracting key info:", error);
+    throw error;
   }
-
-  return extractedInfo;
 }
 
-// Generate follow-up questions based on the user’s responses
-export async function getFollowUpQuestions(responses: Response[]): Promise<string[]> {
-  const followUpQuestions: string[] = [];
 
-  const batchPrompt = responses
-    .map(
-      (response) => `Question: "${response.question}"\nResponse: "${response.response}"`
-    )
-    .join("\n\n");
-
-  const prompt = `
-Based on the user's responses, generate friendly follow-up questions to explore their personality, hobbies, and professional life further. The questions should be light and open-ended to encourage more detail. 
-
-${batchPrompt}
-
-Generate a few follow-up questions to refine the user's digital profile.
-`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: prompt },
-      ],
-      max_tokens: 150,
-    });
-
-    const followUp = completion.choices[0]?.message.content?.trim();
-    
-    if (followUp) {
-      followUpQuestions.push(
-        ...followUp.split("\n").filter((q) => q.trim() !== "")
-      );
-    }
-  } catch (error) {
-    console.error(`Error generating follow-up questions:`, error);
-  }
-
-  return followUpQuestions;
-}
 
 // Create GPT configuration based on the extracted key information
 export async function createGptConfiguration(allKeyInfo: ExtractedInfo): Promise<object> {
@@ -160,3 +106,98 @@ ${Object.entries(allKeyInfo)
 
   return {};
 }
+
+
+// // Extract key information from user responses
+// export async function getKeyInfoFromResponse(responses: Response[]): Promise<ExtractedInfo> {
+//   return await processResponses(responses);
+// }
+
+// Process responses and extract key insights
+// async function processResponses(responses: Response[]): Promise<ExtractedInfo> {
+//   const extractedInfo: ExtractedInfo = {};
+
+//   // Create a prompt with each question and response for summarization
+//   const batchPrompt = responses
+//     .map(
+//       (response) => `Q: "${response.question}"\nA: "${response.response}"\nSummarize the key insights.`
+//     )
+//     .join("\n\n");
+
+//   const prompt = `
+// Extract and summarize key information from the following responses:
+
+// ${batchPrompt}
+
+// Provide a concise summary for each response to build a personalized digital profile of the user.
+// `;
+
+//   try {
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         { role: "system", content: systemPrompt },
+//         { role: "user", content: prompt },
+//       ],
+//       max_tokens: 500,
+//     });
+
+//     const completionContent = completion.choices[0]?.message.content?.trim();
+    
+//     if (completionContent) {
+//       const results = completionContent.split("\n\n");
+//       results.forEach((info, index) => {
+//         const question = responses[index]?.question;
+//         if (question) {
+//           extractedInfo[question] = info.trim();
+//         }
+//       });
+//     }
+//   } catch (error) {
+//     console.error(`Error processing responses:`, error);
+//   }
+
+//   return extractedInfo;
+// }
+
+// Generate follow-up questions based on the user’s responses
+// export async function getFollowUpQuestions(responses: Response[]): Promise<string[]> {
+//   const followUpQuestions: string[] = [];
+
+//   const batchPrompt = responses
+//     .map(
+//       (response) => `Question: "${response.question}"\nResponse: "${response.response}"`
+//     )
+//     .join("\n\n");
+
+//   const prompt = `
+// Based on the user's responses, generate friendly follow-up questions to explore their personality, hobbies, and professional life further. The questions should be light and open-ended to encourage more detail. 
+
+// ${batchPrompt}
+
+// Generate a few follow-up questions to refine the user's digital profile.
+// `;
+
+//   try {
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         { role: "system", content: systemPrompt },
+//         { role: "user", content: prompt },
+//       ],
+//       max_tokens: 150,
+//     });
+
+//     const followUp = completion.choices[0]?.message.content?.trim();
+    
+//     if (followUp) {
+//       followUpQuestions.push(
+//         ...followUp.split("\n").filter((q) => q.trim() !== "")
+//       );
+//     }
+//   } catch (error) {
+//     console.error(`Error generating follow-up questions:`, error);
+//   }
+
+//   return followUpQuestions;
+// }

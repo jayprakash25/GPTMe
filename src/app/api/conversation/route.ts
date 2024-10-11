@@ -4,16 +4,10 @@ import dbConnection from "@/lib/dbConnect";
 import ConversationModel from "@/models/Conversation";
 import { NextResponse } from "next/server";
 import {
-  getFollowUpQuestions,
-  getKeyInfoFromResponse,
   createGptConfiguration,
+  generateResponse,
+  extractKeyInfo,
 } from "@/services/gptService";
-
-interface ResponseType {
-  questionId: string;
-  question: string;
-  response: string;
-}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -26,86 +20,68 @@ export async function POST(req: Request) {
     });
   }
 
-
   await dbConnection();
 
   try {
-    const { responses, isFollowUp } = await req.json();
+    const { message, action} = await req.json();
 
-    if (!user.id || !responses) {
-      return NextResponse.json({
-        statusCode: 400,
-        message: "Invalid input: userId and responses are required",
-      });
-    }
+    let conversation = await ConversationModel.findOne({ userId: user.id }).sort({ createdAt: -1 });
 
-    let conversation = await ConversationModel.findOne({ userId: user.id, status: "in_progress" });
-    
     if (!conversation) {
       conversation = new ConversationModel({
         userId: user.id,
         status: "in_progress",
-        responses: [],
-        followUpResponses: [],
-        extractedInfo: {},
+        messages: [],
       });
     }
 
-    if (!isFollowUp) {
-      // Process initial responses
-      conversation.responses = responses.map((resp: ResponseType) => ({
-        // questionId: resp.questionId,
-        question: resp.question,
-        response: resp.response,
-      }));
-
-      const keyInfoFromInitialResponse = await getKeyInfoFromResponse(responses);
-      conversation.extractedInfo = new Map(Object.entries(keyInfoFromInitialResponse));
-
-      const followUpQuestions = await getFollowUpQuestions(responses);
-
-      await conversation.save();
-      console.log("saved");
-
+    if (action === "fetch_history") {
       return NextResponse.json({
         statusCode: 200,
-        message: "Initial responses processed successfully",
+        message: "Conversation history fetched",
         data: {
-          followUpQuestions,
-          extractedInfo: Object.fromEntries(conversation.extractedInfo),
+          messages: conversation.messages,
+          status: conversation.status,
         },
       });
+    }
+
+    // Add user message to conversation
+    conversation.messages.push({ role: "user", content: message });
+
+    let aiResponse;
+    if (conversation.status === "completed") {
+      // If the conversation is already completed, just acknowledge the new information
+      aiResponse = "Thank you for the additional information. Your digital twin has been updated.";
     } else {
-      // Process follow-up responses
-      conversation.followUpResponses = responses.map((resp: ResponseType) => ({
-        // questionId: resp.questionId,
-        question: resp.question,
-        response: resp.response,
-      }));
+      // Generate AI response
+      aiResponse = await generateResponse(conversation.messages);
+      
+      // Check if conversation is complete
+      if (aiResponse.toLowerCase().includes("digital version is now created")) {
+        conversation.status = "completed";
 
+        // Extract key information
+        conversation.extractedInfo = await extractKeyInfo(conversation.messages);
 
-      // Combine all responses for final processing
-      const allResponses = [...conversation.responses, responses];
-      const keyInfo = await getKeyInfoFromResponse(allResponses);
-      conversation.extractedInfo = new Map(Object.entries(keyInfo));
-
-      // Generate GPT configuration
-      const gptConfiguration = await createGptConfiguration(conversation.extractedInfo);
-      conversation.gptConfiguration = gptConfiguration;
-
-      conversation.status = "completed";
-      await conversation.save();
-      console.log("saved");
-
-      return NextResponse.json({
-        statusCode: 200,
-        message: "Conversation completed successfully",
-        data: {
-          extractedInfo: conversation.extractedInfo,
-          gptConfiguration,
-        },
-      });
+        // Generate GPT configuration
+        conversation.gptConfiguration = await createGptConfiguration(conversation.extractedInfo);
+      }
     }
+
+    conversation.messages.push({ role: "assistant", content: aiResponse });
+    await conversation.save();
+
+    return NextResponse.json({
+      statusCode: 200,
+      message: conversation.status === "completed" ? "Conversation completed" : "Message processed",
+      data: {
+        aiResponse,
+        status: conversation.status,
+        extractedInfo: conversation.status === "completed" ? conversation.extractedInfo : undefined,
+        gptConfiguration: conversation.status === "completed" ? conversation.gptConfiguration : undefined,
+      },
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json({
