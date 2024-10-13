@@ -8,12 +8,14 @@ import { useToast } from '@/hooks/use-toast'
 import ReactMarkdown from 'react-markdown'
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConfiguration, updateConfiguration } from '@/redux/features/configSlice'
+import axios from 'axios'
 
 export default function ConfigureInterface() {
   const dispatch = useDispatch<AppDispatch>()
   const { extractedInfo, status, error } = useSelector((state: RootState) => state.config)
   const [isEditing, setIsEditing] = useState(false)
   const [editedInfo, setEditedInfo] = useState('')
+  const [isTraining, setIsTraining] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -58,6 +60,30 @@ export default function ConfigureInterface() {
     }
   }
 
+  const handleTrain = async() => {
+    setIsTraining(true)
+    // Call the train endpoint
+    try {
+      const response = await axios.get('/api/configure?gptConfig=true')
+      if(response.status === 200) {
+        toast({
+          title: "Training Complete",
+          description: "Your digital twin has been successfully trained.",
+        })
+      }
+      console.log(response)
+    } catch (error) {
+      console.error("Error training digital twin:", error)
+      toast({
+        title: "Training Failed",
+        description: "There was an error training your digital twin.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsTraining(false)
+    }
+  }
+
   if (status === 'loading') {
     return <div>Loading...</div>
   }
@@ -74,6 +100,9 @@ export default function ConfigureInterface() {
             <ReactMarkdown>{extractedInfo || "No configuration available."}</ReactMarkdown>
           </div>
           <Button onClick={() => setIsEditing(true)}>Edit Configuration</Button>
+          <Button onClick={handleTrain} disabled={isTraining}>
+              {isTraining ? 'Training...' : 'Train Digital Twin'}
+            </Button>
         </>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -3,8 +3,9 @@ import { authOptions } from "../auth/[...nextauth]/options";
 import { getServerSession, User } from "next-auth";
 import dbConnection from "@/lib/dbConnect";
 import ConversationModel from "@/models/Conversation";
+import { createGptConfiguration } from "@/services/gptService";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const user: User = session?.user;
 
@@ -18,6 +19,12 @@ export async function GET() {
   await dbConnection();
 
   try {
+
+    const { searchParams } = new URL(req.url)
+    const queryParams = {
+      gptConfig: searchParams.get('gptConfig'),
+    }
+
     const conversation = await ConversationModel.findOne({ userId: user.id });
     if (!conversation) {
       return NextResponse.json({
@@ -25,11 +32,26 @@ export async function GET() {
         message: "No conversation found",
       });
     }
-    return NextResponse.json({
-      statusCode: 200,
-      message: "Conversation retrieved successfully",
-      data: conversation,
-    });
+
+
+    if(queryParams.gptConfig){
+      const gptConfig = await createGptConfiguration(conversation.extractedInfo);
+      conversation.gptConfiguration = gptConfig;
+
+      await conversation.save();
+
+      return NextResponse.json({
+        statusCode: 200,
+        message: 'GPT configuration created successfully',
+        data: conversation.gptConfiguration,
+      });
+    } else {
+      return NextResponse.json({
+        statusCode: 200,
+        message: 'Conversation retrieved successfully',
+        data: conversation,
+      });
+    }
   } catch (error) {
     return NextResponse.json({
       statusCode: 500,
@@ -60,7 +82,7 @@ export async function PUT(req: Request){
 
         const updatedConfiguration = await ConversationModel.findOneAndUpdate(
             {userId},
-            {$set: {extractedInfo: extractedInfo}},
+            {$set: {extractedInfo: new Map(Object.entries(extractedInfo))}},
             {new: true}
         );
 

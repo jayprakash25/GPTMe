@@ -3,9 +3,9 @@ import OpenAI from "openai";
 
 
 // Define the structure for extracted information
-interface ExtractedInfo {
-  [question: string]: string;
-}
+// interface ExtractedInfo {
+//   [question: string]: string;
+// }
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -75,7 +75,7 @@ export async function extractKeyInfo(messages: { role: string; content: string }
 
 
 // Create GPT configuration based on the extracted key information
-export async function createGptConfiguration(allKeyInfo: ExtractedInfo): Promise<object> {
+export async function createGptConfiguration(allKeyInfo: string): Promise<object> {
   const prompt = `
 Based on the following user information, create a configuration for a GPT model to represent the user in conversations. The configuration should include:
 
@@ -85,16 +85,14 @@ Based on the following user information, create a configuration for a GPT model 
 4. Any specific instructions for the GPT when engaging in conversations as this user.
 
 User Information:
-${Object.entries(allKeyInfo)
-  .map(([key, value]) => `${key}: ${value}`)
-  .join("\n")}
+${allKeyInfo}
 `;
 
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: systemPrompt },
+        // { role: "system", content: systemPrompt },
         { role: "user", content: prompt },
       ],
       max_tokens: 500,
