@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 // import localFont from "next/font/local";
 import "./globals.css";
-import AuthProvider from "@/context/AuthProvider";
+import AuthProvider from "@/Providers/AuthProvider";
 import { Toaster } from "@/Components/ui/toaster"
+import { Providers } from "@/Providers/Provider";
+
 
 export const metadata: Metadata = {
   title: "GPT ME",
@@ -16,12 +18,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <Providers>
       <AuthProvider>
       <body>
         {children}
         <Toaster />
       </body>
       </AuthProvider>
+      </Providers>
     </html>
   );
 }

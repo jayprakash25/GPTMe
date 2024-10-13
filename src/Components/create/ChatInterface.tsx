@@ -1,51 +1,29 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+'use client'
+
+import React, { useState, useEffect, useRef } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { Textarea } from "@/Components/ui/textarea"
 import { Button } from "@/Components/ui/button"
 import { Send, User, Bot } from "lucide-react"
 import { ScrollArea } from "@/Components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import axios from 'axios'
+import { AppDispatch, RootState } from '@/redux/store'
+import { fetchConversationHistory, sendMessage, addMessage } from '@/redux/features/chatSlice'
 import TypingEffect from './TypingEffect'
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([])
+  const dispatch = useDispatch<AppDispatch>()
+  const { messages, status, conversationStatus } = useSelector((state: RootState) => state.chat)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [conversationStatus, setConversationStatus] = useState<'in_progress' | 'completed'>('in_progress')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const fetchConversationHistory = useCallback(async () => {
-    setIsTyping(true)
-    try {
-      const response = await axios.post('/api/conversation', { action: 'fetch_history' })
-      if (response.data.data.messages && response.data.data.messages.length > 0) {
-        setMessages(response.data.data.messages)
-        setConversationStatus(response.data.data.status)
-      } else {
-        // If no history, start a new conversation
-        const initialMessage: Message = {
-          role: 'assistant',
-          content: "Hey there! I'm here to learn all about you, so I can become your digital twin. Ready to start this journey together?"
-        }
-        setMessages([initialMessage])
-      }
-    } catch (error) {
-      console.error('Error fetching conversation history:', error)
-      // Handle error (e.g., show an error message to the user)
-    } finally {
-      setIsTyping(false)
-    }
-  }, [])
-
   useEffect(() => {
-    fetchConversationHistory()
-  }, [fetchConversationHistory])
+    if (status === 'idle') {
+      dispatch(fetchConversationHistory())
+    }
+  }, [dispatch, status])
 
   useEffect(() => {
     scrollToBottom()
@@ -60,24 +38,15 @@ export default function ChatInterface() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     if (input.trim() && !isTyping) {
-      const userMessage: Message = { role: 'user', content: input }
-      setMessages(prev => [...prev, userMessage])
+      dispatch(addMessage({ role: 'user', content: input }))
       setInput('')
       setIsTyping(true)
 
       try {
-        const response = await axios.post('/api/conversation', { 
-          message: input,
-        })
-        const aiResponse: Message = { role: 'assistant', content: response.data.data.aiResponse }
-        setMessages(prev => [...prev, aiResponse])
-        
-        if (response.data.data.status === "completed") {
-          setConversationStatus('completed')
-        }
+        await dispatch(sendMessage(input)).unwrap()
       } catch (error) {
         console.error('Error processing message:', error)
-        setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I encountered an error. Can you please try again?" }])
+        dispatch(addMessage({ role: 'assistant', content: "I'm sorry, I encountered an error. Can you please try again?" }))
       } finally {
         setIsTyping(false)
       }
@@ -127,8 +96,7 @@ export default function ChatInterface() {
                   message.role === 'user' ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
                 )}
               >
-
-                {message.role === 'assistant' ? (
+                {message.role === 'assistant' && message.isNew ? (
                   <TypingEffect text={message.content} />
                 ) : (
                   message.content
