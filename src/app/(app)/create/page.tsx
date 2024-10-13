@@ -8,13 +8,19 @@ import ChatInterface from '@/Components/create/ChatInterface'
 import ConfigureInterface from '@/Components/create/ConfigureInterface'
 import PreviewSection from '@/Components/create/PreviewSection'
 
-export default function DigitalAvatarCreator() {
+export default function DigitalCreator() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [avatarConfig, setAvatarConfig] = useState({
     name: '',
     interests: '',
     personality: ''
   })
+
+  const [activeTab, setActiveTab] = useState('chat')
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value)
+  }
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode)
@@ -31,16 +37,16 @@ export default function DigitalAvatarCreator() {
               {isDarkMode ? <Sun className="h-[1.2rem] w-[1.2rem]" /> : <Moon className="h-[1.2rem] w-[1.2rem]" />}
             </Button>
           </div>
-          <Tabs defaultValue="chat" className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="chat">Chat</TabsTrigger>
               <TabsTrigger value="configure">Configure</TabsTrigger>
             </TabsList>
             <TabsContent value="chat">
-              <ChatInterface avatarConfig={avatarConfig} />
+              <ChatInterface  onConfigureClick={() => handleTabChange('configure')}/>
             </TabsContent>
             <TabsContent value="configure">
-              <ConfigureInterface avatarConfig={avatarConfig} setAvatarConfig={setAvatarConfig} />
+              <ConfigureInterface />
             </TabsContent>
           </Tabs>
         </div>

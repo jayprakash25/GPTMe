@@ -7,11 +7,16 @@ import { Button } from "@/Components/ui/button"
 import { Send, User, Bot } from "lucide-react"
 import { ScrollArea } from "@/Components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { AppDispatch, RootState } from '@/redux/store'
-import { fetchConversationHistory, sendMessage, addMessage } from '@/redux/features/chatSlice'
+import { RootState, AppDispatch } from '@/redux/store'
+import { fetchConversationHistory, sendMessage, addMessage, setConversationStatus } from  '@/redux/features/chatSlice'
 import TypingEffect from './TypingEffect'
+import FloatingCard from './FloatingCard'
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  onConfigureClick: () => void
+}
+
+export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
   const dispatch = useDispatch<AppDispatch>()
   const { messages, status, conversationStatus } = useSelector((state: RootState) => state.chat)
   const [input, setInput] = useState('')
@@ -27,7 +32,7 @@ export default function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isTyping])
+  }, [messages, isTyping, conversationStatus])
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -70,6 +75,15 @@ export default function ChatInterface() {
       e.preventDefault()
       handleSend(e)
     }
+  }
+
+  const handleAddNewInfo = () => {
+    dispatch(setConversationStatus('in_progress'))
+    dispatch(addMessage({
+      role: 'assistant',
+      content: "Great! What additional information would you like to share?",
+      isNew: true
+    }))
   }
 
   return (
@@ -121,6 +135,11 @@ export default function ChatInterface() {
                   <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                 </div>
               </div>
+            </div>
+          )}
+          {conversationStatus === 'completed' && (
+            <div className="py-4">
+              <FloatingCard onAddNewInfo={handleAddNewInfo} onConfigureClick={onConfigureClick} />
             </div>
           )}
         </div>
