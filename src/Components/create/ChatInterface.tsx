@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Textarea } from "@/Components/ui/textarea"
 import { Button } from "@/Components/ui/button"
-import { Send, User, Bot } from "lucide-react"
+import { Send,  Bot } from "lucide-react"
 import { ScrollArea } from "@/Components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { RootState, AppDispatch } from '@/redux/store'
@@ -36,9 +36,12 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
     }
-  }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,15 +63,15 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
-    adjustTextareaHeight()
+    // adjustTextareaHeight()
   }
 
-  const adjustTextareaHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
-  }
+  // const adjustTextareaHeight = () => {
+  //   if (textareaRef.current) {
+  //     textareaRef.current.style.height = 'auto'
+  //     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+  //   }
+  // }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -87,7 +90,7 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
   }
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col bg-background border rounded-lg shadow-sm">
+    <div className="h-[75vh] flex flex-col bg-background border rounded-lg shadow-sm">
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
@@ -100,14 +103,14 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
               )}
             >
               {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-primary my-3 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
               )}
               <div
                 className={cn(
-                  "max-w-[70%] p-3 rounded-lg",
-                  message.role === 'user' ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                  "max-w-[70%]  py-3",
+                  message.role === 'user' ? "bg-primary text-primary-foreground px-3  rounded-l-xl" : " rounded-r-xl  font-semibold text-secondary-foreground"
                 )}
               >
                 {message.role === 'assistant' && message.isNew ? (
@@ -116,11 +119,11 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
                   message.content
                 )}
               </div>
-              {message.role === 'user' && (
+              {/* {message.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                   <User className="w-4 h-4" />
                 </div>
-              )}
+              )} */}
             </div>
           ))}
           {isTyping && (
@@ -152,7 +155,7 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={conversationStatus === 'completed' ? "Add new information..." : "Type your message..."}
-            className="flex-1 min-h-[40px] max-h-[120px] p-2 rounded-md border resize-none"
+            className="flex-1 min-h-[40px] max-h-[120px] font-semibold p-2 rounded-md border resize-none"
             disabled={isTyping}
           />
           <Button 

@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast'
 import ReactMarkdown from 'react-markdown'
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConfiguration, updateConfiguration } from '@/redux/features/configSlice'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/Components/ui/card"
+import { Loader2 } from "lucide-react"
 import axios from 'axios'
 
 export default function ConfigureInterface() {
@@ -16,6 +18,7 @@ export default function ConfigureInterface() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedInfo, setEditedInfo] = useState('')
   const [isTraining, setIsTraining] = useState(false)
+  const [enableTraining, setEnableTraining] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -26,6 +29,7 @@ export default function ConfigureInterface() {
 
   useEffect(() => {
     setEditedInfo(extractedInfo)
+    setEnableTraining(!extractedInfo) // Enable training if there's no configuration.
   }, [extractedInfo])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -50,6 +54,7 @@ export default function ConfigureInterface() {
         description: "Your configuration has been successfully updated.",
       })
       setIsEditing(false)
+      setEnableTraining(true) // Enable training after updating the configuration.
     } catch (error) {
       console.error("Error updating configuration:", error)
       toast({
@@ -60,18 +65,17 @@ export default function ConfigureInterface() {
     }
   }
 
-  const handleTrain = async() => {
+  const handleTrain = async () => {
     setIsTraining(true)
-    // Call the train endpoint
+    setEnableTraining(false)
     try {
       const response = await axios.get('/api/configure?gptConfig=true')
-      if(response.status === 200) {
+      if (response.status === 200) {
         toast({
           title: "Training Complete",
           description: "Your digital twin has been successfully trained.",
         })
       }
-      console.log(response)
     } catch (error) {
       console.error("Error training digital twin:", error)
       toast({
@@ -85,41 +89,61 @@ export default function ConfigureInterface() {
   }
 
   if (status === 'loading') {
-    return <div>Loading...</div>
+    return (
+      <Card className="w-full h-[600px] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </Card>
+    )
   }
 
   if (status === 'failed') {
-    return <div>Error: {error}</div>
+    return (
+      <Card className="w-full h-[600px] flex items-center justify-center">
+        <CardContent>
+          <p className="text-destructive">Error: {error}</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {!isEditing ? (
-        <>
+    <Card className="w-full h-[75vh] flex flex-col">
+      <CardHeader>
+        <CardTitle>Configure Digital Twin</CardTitle>
+      </CardHeader>
+      <CardContent className="flex-grow overflow-auto">
+        {!isEditing ? (
           <div className="prose max-w-none">
             <ReactMarkdown>{extractedInfo || "No configuration available."}</ReactMarkdown>
           </div>
-          <Button onClick={() => setIsEditing(true)}>Edit Configuration</Button>
-          <Button onClick={handleTrain} disabled={isTraining}>
-              {isTraining ? 'Training...' : 'Train Digital Twin'}
-            </Button>
-        </>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        ) : (
           <Textarea
             value={editedInfo}
             onChange={handleChange}
             placeholder="Enter your configuration in Markdown format"
-            rows={20}
-            className="w-full p-2 border rounded"
+            className="w-full h-full min-h-[400px] p-2 border rounded"
           />
-          <div className="flex space-x-4">
-            <Button type="submit" className="flex-1">Update Configuration</Button>
-            
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditing(false)}>Cancel</Button>
-          </div>
-        </form>
-      )}
-    </div>
+        )}
+      </CardContent>
+      <CardFooter className="flex justify-between space-x-2 border-t pt-4">
+        {!isEditing ? (
+          <>
+            <Button onClick={() => setIsEditing(true)}>Edit Configuration</Button>
+            <Button 
+              onClick={handleTrain} 
+              disabled={!enableTraining}
+            >
+              {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isTraining ? 'Training...' : 'Train Digital Twin'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={handleSubmit}>Update Configuration</Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+          </>
+        )}
+      </CardFooter>
+    </Card>
   )
 }

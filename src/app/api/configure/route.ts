@@ -82,7 +82,7 @@ export async function PUT(req: Request){
 
         const updatedConfiguration = await ConversationModel.findOneAndUpdate(
             {userId},
-            {$set: {extractedInfo: new Map(Object.entries(extractedInfo))}},
+            {$set: {extractedInfo: extractedInfo}},
             {new: true}
         );
 
