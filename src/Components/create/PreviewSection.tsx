@@ -10,19 +10,14 @@ import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/Components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar"
 
-interface AvatarConfig {
-  name?: string;
-  imageUrl?: string;
-  interests?: string;
-  personality?: string;
-}
+
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
 
-export default function PreviewSection({ avatarConfig }: { avatarConfig: AvatarConfig }) {
+export default function PreviewSection() {
   const [isTestingConversation, setIsTestingConversation] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
@@ -84,37 +79,37 @@ export default function PreviewSection({ avatarConfig }: { avatarConfig: AvatarC
   }
 
   return (
-    <Card className="w-full h-[600px] flex flex-col">
-      <CardHeader className="border-b px-6 py-4">
-        <CardTitle className="text-2xl font-bold flex items-center">
+    <Card className="w-full h-[94vh] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
+      <CardHeader className="border-b border-blue-24 px-6 py-4">
+        <CardTitle className="text-2xl font-bold flex items-center text-body-loud">
           <Avatar className="w-8 h-8 mr-2">
-            <AvatarImage src={avatarConfig.imageUrl} alt={avatarConfig.name} />
-            <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold">
-              {avatarConfig.name ? avatarConfig.name[0].toUpperCase() : '?'}
+            <AvatarImage src={''} alt={''} />
+            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold">
+              { '?'}
             </AvatarFallback>
           </Avatar>
-          {avatarConfig.name || 'Unnamed Avatar'}
+          { 'Unnamed Avatar'}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col flex-grow p-0 overflow-hidden">
         {!isTestingConversation ? (
           <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
             <Avatar className="w-24 h-24">
-              <AvatarImage src={avatarConfig.imageUrl} alt={avatarConfig.name} />
-              <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white text-4xl font-bold">
-                {avatarConfig.name ? avatarConfig.name[0].toUpperCase() : '?'}
+              <AvatarImage src={''} alt={''} />
+              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-4xl font-bold">
+                {'?'}
               </AvatarFallback>
             </Avatar>
-            <h2 className="text-2xl font-bold">{avatarConfig.name || 'Unnamed Avatar'}</h2>
-            <p className="text-center text-muted-foreground">
-              {avatarConfig.interests ? `Interests: ${avatarConfig.interests}` : 'No interests specified'}
+            <h2 className="text-2xl font-bold">{'Unnamed Avatar'}</h2>
+            <p className="text-center text-gray-400">
+              {`Interests: `}
             </p>
-            <p className="text-center text-muted-foreground">
-              {avatarConfig.personality ? `Personality: ${avatarConfig.personality}` : 'No personality specified'}
+            <p className="text-center text-gray-400">
+              {`Personality:`}
             </p>
             <Button 
               onClick={handleTestConversation} 
-              className="mt-4"
+              className="mt-4 bg-blue-24 hover:bg-blue-90 text-body-loud"
             >
               Start Conversation
               <MessageCircle className="ml-2 h-4 w-4" />
@@ -128,20 +123,20 @@ export default function PreviewSection({ avatarConfig }: { avatarConfig: AvatarC
                   <div className={`flex items-start space-x-2 max-w-[70%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                     {message.role === 'assistant' ? (
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={avatarConfig.imageUrl} alt={avatarConfig.name} />
-                        <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold">
-                          {avatarConfig.name ? avatarConfig.name[0].toUpperCase() : '?'}
+                        <AvatarImage src={''} alt={''} />
+                        <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold">
+                          {'?'}
                         </AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary-foreground" />
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+                        <User className="h-4 w-4 text-gray-100" />
                       </div>
                     )}
                     <div className={`p-3 rounded-lg ${
                       message.role === 'user' 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'bg-muted'
+                        ? 'bg-blue-24 text-body-loud' 
+                        : 'bg-blue-12 text-body-normal'
                     }`}>
                       {message.content}
                     </div>
@@ -152,7 +147,7 @@ export default function PreviewSection({ avatarConfig }: { avatarConfig: AvatarC
           </ScrollArea>
         )}
         {isTestingConversation && (
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-blue-24">
             <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex space-x-2">
               <Input
                 ref={inputRef}
@@ -160,9 +155,9 @@ export default function PreviewSection({ avatarConfig }: { avatarConfig: AvatarC
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Type your message..."
                 disabled={isLoading}
-                className="flex-grow"
+                className="flex-grow bg-blue-12 text-body-normal border-blue-24 focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
               />
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="bg-blue-24 hover:bg-blue-90 text-body-loud">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </form>

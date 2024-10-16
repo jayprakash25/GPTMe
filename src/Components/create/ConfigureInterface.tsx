@@ -107,13 +107,13 @@ export default function ConfigureInterface() {
   }
 
   return (
-    <Card className="w-full h-[75vh] flex flex-col">
-      <CardHeader>
-        <CardTitle>Configure Digital Twin</CardTitle>
+    <Card className="w-full h-[75vh] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
+      <CardHeader className="border-b border-blue-24">
+        <CardTitle className="text-xl font-semibold text-body-loud">Configure Digital Twin</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow overflow-auto">
+      <CardContent className="flex-grow overflow-auto p-4">
         {!isEditing ? (
-          <div className="prose max-w-none">
+          <div className="prose prose-invert max-w-none">
             <ReactMarkdown>{extractedInfo || "No configuration available."}</ReactMarkdown>
           </div>
         ) : (
@@ -121,17 +121,18 @@ export default function ConfigureInterface() {
             value={editedInfo}
             onChange={handleChange}
             placeholder="Enter your configuration in Markdown format"
-            className="w-full h-full min-h-[400px] p-2 border rounded"
+            className="w-full h-full min-h-[400px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
           />
         )}
       </CardContent>
-      <CardFooter className="flex justify-between space-x-2 border-t pt-4">
+      <CardFooter className="flex justify-between space-x-2 border-t border-blue-24 pt-4">
         {!isEditing ? (
           <>
-            <Button onClick={() => setIsEditing(true)}>Edit Configuration</Button>
+            <Button onClick={() => setIsEditing(true)} className="bg-blue-24 hover:bg-blue-90 text-body-loud">Edit Configuration</Button>
             <Button 
               onClick={handleTrain} 
               disabled={!enableTraining}
+              className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
             >
               {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isTraining ? 'Training...' : 'Train Digital Twin'}
@@ -139,8 +140,8 @@ export default function ConfigureInterface() {
           </>
         ) : (
           <>
-            <Button onClick={handleSubmit}>Update Configuration</Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button onClick={handleSubmit} className="bg-blue-24 hover:bg-blue-90 text-body-loud">Update Configuration</Button>
+            <Button variant="outline" onClick={() => setIsEditing(false)} className="border-blue-24 text-body-normal hover:bg-blue-12">Cancel</Button>
           </>
         )}
       </CardFooter>

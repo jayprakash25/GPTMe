@@ -4,25 +4,26 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Textarea } from "@/Components/ui/textarea"
 import { Button } from "@/Components/ui/button"
-import { Send,  Bot } from "lucide-react"
 import { ScrollArea } from "@/Components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar"
+import { Send, User, Paperclip } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RootState, AppDispatch } from '@/redux/store'
-import { fetchConversationHistory, sendMessage, addMessage, setConversationStatus } from  '@/redux/features/chatSlice'
+import { fetchConversationHistory, sendMessage, addMessage, setConversationStatus } from '@/redux/features/chatSlice'
 import TypingEffect from './TypingEffect'
-import FloatingCard from './FloatingCard'
 
 interface ChatInterfaceProps {
   onConfigureClick: () => void
 }
 
-export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
+export default function ChatInterface({ onConfigureClick }: ChatInterfaceProps) {
   const dispatch = useDispatch<AppDispatch>()
   const { messages, status, conversationStatus } = useSelector((state: RootState) => state.chat)
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (status === 'idle') {
@@ -30,18 +31,13 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
     }
   }, [dispatch, status])
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isTyping, conversationStatus])
-
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  };
+  }, [messages])
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,10 +47,15 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
       setIsTyping(true)
 
       try {
-        await dispatch(sendMessage(input)).unwrap()
+        const response = await dispatch(sendMessage(input)).unwrap()
+        dispatch(addMessage({ role: 'assistant', content: response, isNew: true }))
       } catch (error) {
         console.error('Error processing message:', error)
-        dispatch(addMessage({ role: 'assistant', content: "I'm sorry, I encountered an error. Can you please try again?" }))
+        dispatch(addMessage({ 
+          role: 'assistant', 
+          content: "I'm sorry, I encountered an error. Can you please try again?",
+          isNew: true 
+        }))
       } finally {
         setIsTyping(false)
       }
@@ -63,15 +64,15 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value)
-    // adjustTextareaHeight()
+    adjustTextareaHeight()
   }
 
-  // const adjustTextareaHeight = () => {
-  //   if (textareaRef.current) {
-  //     textareaRef.current.style.height = 'auto'
-  //     textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-  //   }
-  // }
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`
+    }
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -89,8 +90,14 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
     }))
   }
 
+  const handleAttachFile = () => {
+    // Implement file attachment logic here
+    console.log('File attachment clicked')
+  }
+
   return (
-    <div className="h-[75vh] flex flex-col bg-background border rounded-lg shadow-sm">
+    <div className="h-[75vh] flex flex-col bg-gradient-to-b from-dark-bg to-blue-6 border border-blue-24 text-body-loud rounded-xl overflow-hidden shadow-lg">
+     
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
@@ -103,70 +110,79 @@ export default function ChatInterface({onConfigureClick}: ChatInterfaceProps) {
               )}
             >
               {message.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-primary my-3 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
-                </div>
+                <Avatar className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 ring-2 ring-blue-90">
+                  <AvatarFallback>AI</AvatarFallback>
+                  <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
+                </Avatar>
               )}
-              <div
-                className={cn(
-                  "max-w-[70%]  py-3",
-                  message.role === 'user' ? "bg-primary text-primary-foreground px-3  rounded-l-xl" : " rounded-r-xl  font-semibold text-secondary-foreground"
-                )}
-              >
+              <div className={cn(
+                "max-w-[70%] p-3 rounded-lg shadow-md",
+                message.role === 'user' ? "bg-blue-24 text-body-loud" : " text-body-normal",
+                "transform transition-all duration-300 ease-in-out hover:scale-[1.02]",
+                "border border-blue-90/30"
+              )}>
                 {message.role === 'assistant' && message.isNew ? (
                   <TypingEffect text={message.content} />
                 ) : (
-                  message.content
+                  <p className="text-sm leading-relaxed">{message.content}</p>
                 )}
               </div>
-              {/* {message.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-4 h-4" />
-                </div>
-              )} */}
+              {message.role === 'user' && (
+                <Avatar className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 ring-2 ring-blue-90">
+                  <AvatarFallback>
+                    <User className="w-4" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </div>
           ))}
-          {isTyping && (
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <Bot className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <div className="bg-secondary p-3 rounded-lg">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-              </div>
-            </div>
-          )}
-          {conversationStatus === 'completed' && (
-            <div className="py-4">
-              <FloatingCard onAddNewInfo={handleAddNewInfo} onConfigureClick={onConfigureClick} />
-            </div>
-          )}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-      <form onSubmit={handleSend} className="p-4 border-t">
-        <div className="flex space-x-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={conversationStatus === 'completed' ? "Add new information..." : "Type your message..."}
-            className="flex-1 min-h-[40px] max-h-[120px] font-semibold p-2 rounded-md border resize-none"
-            disabled={isTyping}
-          />
-          <Button 
-            type="submit" 
-            size="icon" 
-            disabled={!input.trim() || isTyping}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </form>
+      <div className="border-t border-blue-24 bg-gradient-to-t from-blue-12 to-blue-6 p-4">
+        {conversationStatus === 'completed' ? (
+          <div className="flex justify-between items-center">
+            <Button onClick={handleAddNewInfo} className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 hover:text-black shadow-lg hover:shadow-blue-90/50">
+              Add New Information
+            </Button>
+            <Button onClick={onConfigureClick} className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 shadow-lg hover:text-black hover:shadow-blue-90/50">
+              Go to Configure
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSend} className="flex space-x-2">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message..."
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none bg-blue-12 text-body-loud border-blue-24 focus:border-blue-90 focus:ring-1 focus:ring-blue-90 placeholder-body-muted rounded-lg transition-all duration-200 shadow-inner"
+              disabled={isTyping}
+            />
+            <div className="flex flex-col space-y-2">
+              <Button
+                type="button"
+                size="icon"
+                onClick={handleAttachFile}
+                className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-colors duration-200 focus:ring-2 focus:ring-blue-90 shadow-lg hover:shadow-blue-90/50"
+                aria-label="Attach file"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button 
+                type="submit" 
+                size="icon" 
+                disabled={!input.trim() || isTyping}
+                className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-colors duration-200 focus:ring-2 focus:ring-blue-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-90/50"
+                aria-label="Send message"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   )
 }
