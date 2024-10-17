@@ -18,8 +18,6 @@ interface User extends Document {
     name: { type: String, required: true },
     email: { type: String, required: true },
     picture: { type: String },
-    bio: { type: String }, // Optional user bio
-    gptId: { type: mongoose.Schema.Types.ObjectId, ref: 'GptConfig' }, // Reference to GPT Configuration
     isGptCreated: { type: Boolean, default: false }, // Indicates whether the GPT is created
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
