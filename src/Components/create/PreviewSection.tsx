@@ -76,7 +76,7 @@ export default function PreviewSection({ onEditConfigClick }: PreviewSectionProp
   }
 
   return (
-    <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
+    <Card className="w-full h-[calc(100vh-8rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
       <CardHeader className="border-b border-blue-24 px-6 py-4">
         <CardTitle className="text-2xl font-bold flex items-center text-body-loud">
           <Avatar className="w-8 h-8 mr-2">

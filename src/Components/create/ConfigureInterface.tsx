@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import ReactMarkdown from 'react-markdown'
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConfiguration, updateConfiguration } from '@/redux/features/configSlice'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/Components/ui/card"
+import { Card, CardContent, CardFooter, } from "@/Components/ui/card"
 import { Loader2 } from "lucide-react"
 import axios from 'axios'
 
@@ -24,7 +24,7 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
   const [isTraining, setIsTraining] = useState(false)
   const [enableTraining, setEnableTraining] = useState(false)
   const { toast } = useToast()
-  const [isGPTTrained, setIsGPTTrained] = useState(false)
+  // const [isGPTTrained, setIsGPTTrained] = useState(false)
 
   useEffect(() => {
     if (status === 'idle') {
@@ -80,7 +80,7 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
           title: "Training Complete",
           description: "Your digital twin has been successfully trained.",
         })
-        setIsGPTTrained(true)
+        // setIsGPTTrained(true)
       }
     } catch (error) {
       console.error("Error training digital twin:", error)
@@ -114,9 +114,7 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
 
   return (
     <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
-      <CardHeader className="border-b border-blue-24">
-        <CardTitle className="text-xl font-semibold text-body-loud">Configure Digital Twin</CardTitle>
-      </CardHeader>
+   
       <CardContent className="flex-grow overflow-auto p-4">
         {!isEditing ? (
           <div className="prose prose-invert max-w-none">

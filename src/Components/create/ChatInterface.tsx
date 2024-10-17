@@ -141,12 +141,18 @@ export default function ChatInterface({ onConfigureClick }: ChatInterfaceProps) 
       </ScrollArea>
       <div className="border-t border-blue-24 bg-gradient-to-t from-blue-12 to-blue-6 p-4">
         {conversationStatus === 'completed' ? (
-          <div className="flex flex-col space-y-2">
-            <Button onClick={handleAddNewInfo} className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 hover:text-black shadow-lg hover:shadow-blue-90/50">
-              Add New Information
+          <div className="flex justify-between">
+            <Button 
+              onClick={handleAddNewInfo} 
+              className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 hover:text-black shadow-lg hover:shadow-blue-90/50 px-3 py-1 text-sm"
+            >
+              Add Info
             </Button>
-            <Button onClick={onConfigureClick} className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 shadow-lg hover:text-black hover:shadow-blue-90/50">
-              Go to Configure
+            <Button 
+              onClick={onConfigureClick} 
+              className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 shadow-lg hover:text-black hover:shadow-blue-90/50 px-3 py-1 text-sm"
+            >
+              Configure
             </Button>
           </div>
         ) : (
