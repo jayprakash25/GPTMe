@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from "@/Components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/Components/ui/card"
 import { Input } from "@/Components/ui/input"
 import { MessageCircle, Send, Loader2, User } from "lucide-react"
 import axios from 'axios'
@@ -10,16 +10,13 @@ import { useToast } from "@/hooks/use-toast"
 import { ScrollArea } from "@/Components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar"
 
-
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+interface PreviewSectionProps {
+  onEditConfigClick: () => void
 }
 
-export default function PreviewSection() {
+export default function PreviewSection({ onEditConfigClick }: PreviewSectionProps) {
   const [isTestingConversation, setIsTestingConversation] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
@@ -47,20 +44,20 @@ export default function PreviewSection() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return
 
-    const userMessage: Message = { role: 'user', content: inputMessage }
+    const userMessage = { role: 'user', content: inputMessage }
     setMessages(prevMessages => [...prevMessages, userMessage])
     setInputMessage('')
     setIsLoading(true)
 
     try {
-      const response = await axios.post('/api/preview', {
-        message: inputMessage
+      const response = await axios.post('/api/chat', {
+        message: inputMessage,
       })
 
-      if (response.data.statusCode === 200 && response.data.data.choices) {
-        const assistantMessage: Message = { 
+      if (response.data.statusCode === 200 && response.data.data) {
+        const assistantMessage = { 
           role: 'assistant', 
-          content: response.data.data.choices[0].message.content 
+          content: response.data.data.choices[0].message.content
         }
         setMessages(prevMessages => [...prevMessages, assistantMessage])
       } else {
@@ -79,7 +76,7 @@ export default function PreviewSection() {
   }
 
   return (
-    <Card className="w-full h-[94vh] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
+    <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
       <CardHeader className="border-b border-blue-24 px-6 py-4">
         <CardTitle className="text-2xl font-bold flex items-center text-body-loud">
           <Avatar className="w-8 h-8 mr-2">
@@ -113,6 +110,12 @@ export default function PreviewSection() {
             >
               Start Conversation
               <MessageCircle className="ml-2 h-4 w-4" />
+            </Button>
+            <Button
+              onClick={onEditConfigClick}
+              className="mt-2 bg-blue-24 hover:bg-blue-90 text-body-loud"
+            >
+              Edit Configuration
             </Button>
           </div>
         ) : (
@@ -164,6 +167,17 @@ export default function PreviewSection() {
           </div>
         )}
       </CardContent>
+      {isTestingConversation && (
+        <CardFooter className="border-t border-blue-24 p-4">
+          <Button
+            onClick={onEditConfigClick}
+            className="w-full bg-blue-24 hover:bg-blue-90 text-body-loud"
+          >
+            Not satisfied? Edit Configuration
+          </Button>
+        </CardFooter>
+      )}
     </Card>
+    // </Card>
   )
 }

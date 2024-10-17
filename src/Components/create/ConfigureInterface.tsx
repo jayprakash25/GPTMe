@@ -12,7 +12,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/Componen
 import { Loader2 } from "lucide-react"
 import axios from 'axios'
 
-export default function ConfigureInterface() {
+interface ConfigureInterfaceProps {
+  onPreviewClick: () => void
+}
+
+export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfaceProps) {
   const dispatch = useDispatch<AppDispatch>()
   const { extractedInfo, status, error } = useSelector((state: RootState) => state.config)
   const [isEditing, setIsEditing] = useState(false)
@@ -20,6 +24,7 @@ export default function ConfigureInterface() {
   const [isTraining, setIsTraining] = useState(false)
   const [enableTraining, setEnableTraining] = useState(false)
   const { toast } = useToast()
+  const [isGPTTrained, setIsGPTTrained] = useState(false)
 
   useEffect(() => {
     if (status === 'idle') {
@@ -75,6 +80,7 @@ export default function ConfigureInterface() {
           title: "Training Complete",
           description: "Your digital twin has been successfully trained.",
         })
+        setIsGPTTrained(true)
       }
     } catch (error) {
       console.error("Error training digital twin:", error)
@@ -90,7 +96,7 @@ export default function ConfigureInterface() {
 
   if (status === 'loading') {
     return (
-      <Card className="w-full h-[600px] flex items-center justify-center">
+      <Card className="w-full h-[75vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </Card>
     )
@@ -98,7 +104,7 @@ export default function ConfigureInterface() {
 
   if (status === 'failed') {
     return (
-      <Card className="w-full h-[600px] flex items-center justify-center">
+      <Card className="w-full h-[75vh] flex items-center justify-center">
         <CardContent>
           <p className="text-destructive">Error: {error}</p>
         </CardContent>
@@ -107,7 +113,7 @@ export default function ConfigureInterface() {
   }
 
   return (
-    <Card className="w-full h-[75vh] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
+    <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
       <CardHeader className="border-b border-blue-24">
         <CardTitle className="text-xl font-semibold text-body-loud">Configure Digital Twin</CardTitle>
       </CardHeader>
@@ -125,23 +131,48 @@ export default function ConfigureInterface() {
           />
         )}
       </CardContent>
-      <CardFooter className="flex justify-between space-x-2 border-t border-blue-24 pt-4">
+      <CardFooter className="flex justify-between border-t border-blue-24 pt-4">
         {!isEditing ? (
           <>
-            <Button onClick={() => setIsEditing(true)} className="bg-blue-24 hover:bg-blue-90 text-body-loud">Edit Configuration</Button>
             <Button 
-              onClick={handleTrain} 
-              disabled={!enableTraining}
-              className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
+              onClick={() => setIsEditing(true)} 
+              className="bg-blue-24 hover:bg-blue-90 hover:text-black text-body-loud"
             >
-              {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isTraining ? 'Training...' : 'Train Digital Twin'}
+              Edit Configuration
             </Button>
+            {!enableTraining ? (
+              <Button 
+                onClick={onPreviewClick}
+                className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
+              >
+                Preview 
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleTrain} 
+                disabled={!enableTraining || isTraining}
+                className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
+              >
+                {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isTraining ? 'Training...' : 'Train Digital Twin'}
+              </Button>
+            )}
           </>
         ) : (
           <>
-            <Button onClick={handleSubmit} className="bg-blue-24 hover:bg-blue-90 text-body-loud">Update Configuration</Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)} className="border-blue-24 text-body-normal hover:bg-blue-12">Cancel</Button>
+            <Button 
+              onClick={handleSubmit} 
+              className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
+            >
+              Update Configuration
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditing(false)} 
+              className="border-blue-24 hover:text-white text-body-normal hover:bg-blue-12"
+            >
+              Cancel
+            </Button>
           </>
         )}
       </CardFooter>
