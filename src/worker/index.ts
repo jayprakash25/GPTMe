@@ -45,6 +45,8 @@ interface Message {
   content: string;
 }
 
+
+
 // Type declaration for Hono context with user
 type UserContext = Context<{ Bindings: Env; Variables: { user: JWTPayload } }>;
 
@@ -232,6 +234,93 @@ app.post("/api/conversation", async (c: UserContext) => {
     return c.json(
       { statusCode: 400, message: "Invalid input data" }, // More specific error message
       { status: 400 }
+    );
+  }
+});
+
+// to get gpt configuration
+app.get("/api/gpt-config", async (c: UserContext) => {
+  const userId = c.get("user").payload.sub;
+  try {
+    const config = await c.env.DB.prepare(
+      "SELECT * FROM gpt_configurations WHERE userId = ?"
+    ).bind(userId).first();
+
+    if (!config) {
+      // If no configuration exists, return the extracted info from the conversation
+      // You'll need to implement a function to get this information
+      const conversation = await c.env.DB.prepare(
+        "SELECT extractedinfo FROM conversations WHERE userId = ? ORDER BY createdAt DESC LIMIT 1"
+      ).bind(userId).first();
+
+      return c.json({
+        statusCode: 200,
+        message: "No existing configuration, returning extracted info",
+        data: {
+          name: "",
+          instructions: "",
+          extractedInfo: JSON.parse(conversation?.extractedInfo as string)
+        }
+      });
+    }
+
+    return c.json({
+      statusCode: 200,
+      message: "Configuration fetched",
+      data: {
+        name: config.name,
+        instructions: config.instructions,
+        extractedInfo: JSON.parse(config.extractedInfo as string)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching configuration:", error);
+    return c.json(
+      { statusCode: 500, message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+});
+
+// New endpoint to update GPT configuration
+app.put("/api/gpt-config", async (c: UserContext) => {
+  const userId = c.get("user").payload.sub;
+  const { name, instructions, extractedInfo } = await c.req.json();
+
+  try {
+    const existingConfig = await c.env.DB.prepare(
+      "SELECT id FROM gpt_configurations WHERE userId = ?"
+    )
+      .bind(userId)
+      .first();
+
+    if (existingConfig) {
+      await c.env.DB.prepare(
+        `UPDATE gpt_configurations 
+         SET name = ?, instructions = ?, extractedInfo = ?, updatedAt = CURRENT_TIMESTAMP 
+         WHERE userId = ?`
+      )
+        .bind(name, instructions, JSON.stringify(extractedInfo), userId)
+        .run();
+    } else {
+      await c.env.DB.prepare(
+        `INSERT INTO gpt_configurations (userId, name, instructions, extractedInfo) 
+         VALUES (?, ?, ?, ?)`
+      )
+        .bind(userId, name, instructions, JSON.stringify(extractedInfo))
+        .run();
+    }
+
+    return c.json({
+      statusCode: 200,
+      message: "GPT configuration updated",
+      data: { name, instructions, extractedInfo },
+    });
+  } catch (error) {
+    console.error("Error updating GPT configuration:", error);
+    return c.json(
+      { statusCode: 500, message: "Internal server error" },
+      { status: 500 }
     );
   }
 });

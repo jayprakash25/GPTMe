@@ -1,33 +1,54 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Textarea } from "@/Components/ui/textarea"
 import { Button } from "@/Components/ui/button"
 import { useToast } from '@/hooks/use-toast'
-import ReactMarkdown from 'react-markdown'
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConfiguration, updateConfiguration } from '@/redux/features/configSlice'
-import { Card, CardContent, CardFooter, } from "@/Components/ui/card"
-import { Loader2, Upload } from "lucide-react"
+import { Card, CardContent, CardFooter } from "@/Components/ui/card"
+import { Loader2 } from "lucide-react"
 import { Input } from "@/Components/ui/input"
 import { Label } from "@/Components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select"
 import axios from 'axios'
 
 interface ConfigureInterfaceProps {
   onPreviewClick: () => void
 }
 
+const predefinedInstructions = [
+  { value: "friendly", label: "Friendly and Approachable", instruction: "Respond in a friendly and approachable manner, using casual language and a positive tone." },
+  { value: "professional", label: "Professional and Formal", instruction: "Maintain a professional and formal tone in all responses, using industry-standard terminology when appropriate." },
+  { value: "concise", label: "Concise and Direct", instruction: "Provide brief, to-the-point responses that directly address the user's query without unnecessary elaboration." },
+  { value: "detailed", label: "Detailed and Thorough", instruction: "Offer comprehensive responses that cover all aspects of the user's query, providing examples and explanations where necessary." },
+]
+
+function useDebounce(func: Function, delay: number) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedFunc = useCallback((...args: any[]) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      func(...args)
+    }, delay)
+  }, [func, delay])
+
+  return debouncedFunc
+}
+
 export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfaceProps) {
   const dispatch = useDispatch<AppDispatch>()
-  const { extractedInfo, status, error } = useSelector((state: RootState) => state.config)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedInfo, setEditedInfo] = useState('')
+  const { config, status, error } = useSelector((state: RootState) => state.config)
+  const [name, setName] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [info, setInfo] = useState('')
   const [isTraining, setIsTraining] = useState(false)
   const [enableTraining, setEnableTraining] = useState(false)
-  const [gptName, setGptName] = useState('')
-  const [gptPhoto, setGptPhoto] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -37,32 +58,25 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
   }, [dispatch, status])
 
   useEffect(() => {
-    setEditedInfo(extractedInfo)
-    setEnableTraining(!extractedInfo)
-  }, [extractedInfo])
+    if (config) {
+      setName(config.name || '')
+      setInstructions(config.instructions || '')
+      setInfo(JSON.stringify(config.extractedInfo, null, 2))
+      setEnableTraining(!!config.extractedInfo)
+    }
+  }, [config])
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditedInfo(e.target.value)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editedInfo.trim()) {
-      toast({
-        title: "Error",
-        description: "Configuration cannot be empty.",
-        variant: "destructive"
-      })
+  const updateConfig = useCallback(async (newName: string, newInstructions: string, newInfo: string) => {
+    if (!newName.trim() || !newInstructions.trim() || !newInfo.trim()) {
       return
     }
 
     try {
-      await dispatch(updateConfiguration(editedInfo)).unwrap()
-      toast({
-        title: "Configuration Updated",
-        description: "Your configuration has been successfully updated.",
-      })
-      setIsEditing(false)
+      await dispatch(updateConfiguration({
+        name: newName,
+        instructions: newInstructions,
+        extractedInfo: JSON.parse(newInfo)
+      })).unwrap()
       setEnableTraining(true)
     } catch (error) {
       console.error("Error updating configuration:", error)
@@ -72,6 +86,34 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
         variant: "destructive"
       })
     }
+  }, [dispatch, toast])
+
+  const debouncedUpdateConfig = useDebounce(updateConfig, 500)
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value
+    setName(newName)
+    debouncedUpdateConfig(newName, instructions, info)
+  }
+
+  const handleInstructionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newInstructions = e.target.value
+    setInstructions(newInstructions)
+    debouncedUpdateConfig(name, newInstructions, info)
+  }
+
+  const handleInfoChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newInfo = e.target.value
+    setInfo(newInfo)
+    debouncedUpdateConfig(name, instructions, newInfo)
+  }
+
+  const handlePredefinedInstructionChange = (value: string) => {
+    const selectedInstruction = predefinedInstructions.find(i => i.value === value)
+    if (selectedInstruction) {
+      setInstructions(selectedInstruction.instruction)
+      debouncedUpdateConfig(name, selectedInstruction.instruction, info)
+    }
   }
 
   const handleTrain = async () => {
@@ -79,11 +121,9 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
     setEnableTraining(false)
     try {
       const formData = new FormData()
-      formData.append('gptName', gptName)
-      if (gptPhoto) {
-        formData.append('gptPhoto', gptPhoto)
-      }
-      formData.append('gptConfig', 'true')
+      formData.append('gptName', name)
+      formData.append('gptInstructions', instructions)
+      formData.append('gptConfig', info)
 
       const response = await axios.post('/api/configure', formData, {
         headers: {
@@ -109,17 +149,7 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
     }
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setGptPhoto(e.target.files[0])
-    }
-  }
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click()
-  }
-
-  if (status === 'loading') {
+  if (status === 'loading' && !name && !instructions && !info) {
     return (
       <Card className="w-full h-[75vh] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -139,101 +169,67 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
 
   return (
     <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
-      <CardContent className="flex-grow overflow-auto p-4">
-        {!isEditing ? (
-          <div className="prose prose-invert max-w-none">
-            <ReactMarkdown>{extractedInfo || "No configuration available."}</ReactMarkdown>
-          </div>
-        ) : (
-          <Textarea
-            value={editedInfo}
-            onChange={handleChange}
-            placeholder="Enter your configuration in Markdown format"
-            className="w-full h-full min-h-[400px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
+      <CardContent className="flex-grow overflow-auto p-4 space-y-4">
+        <div>
+          <Label htmlFor="gptName">GPT Name</Label>
+          <Input
+            id="gptName"
+            value={name}
+            onChange={handleNameChange}
+            placeholder="Enter GPT name"
+            className="bg-blue-12 text-body-normal border-blue-24"
           />
-        )}
-      </CardContent>
-      <CardFooter className="flex flex-col items-start border-t border-blue-24 pt-4 space-y-4">
-        {!isEditing ? (
-          <>
-            <div className="flex justify-between w-full">
-              <Button 
-                onClick={() => setIsEditing(true)} 
-                className="bg-blue-24 hover:bg-blue-90 hover:text-black text-body-loud"
-              >
-                Edit Configuration
-              </Button>
-              {!enableTraining ? (
-                <Button 
-                  onClick={onPreviewClick}
-                  className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
-                >
-                  Preview 
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleTrain} 
-                  disabled={!enableTraining || isTraining}
-                  className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
-                >
-                  {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isTraining ? 'Training...' : 'Train Digital Twin'}
-                </Button>
-              )}
-            </div>
-            {enableTraining && (
-              <div className="w-full space-y-4">
-                <div>
-                  <Label htmlFor="gptName">GPT Name</Label>
-                  <Input
-                    id="gptName"
-                    value={gptName}
-                    onChange={(e) => setGptName(e.target.value)}
-                    placeholder="Enter GPT name"
-                    className="bg-blue-12 text-body-normal border-blue-24"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="gptPhoto">GPT Photo</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="gptPhoto"
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      ref={fileInputRef}
-                    />
-                    <Button
-                      type="button"
-                      onClick={triggerFileInput}
-                      className="bg-blue-24 hover:bg-blue-90 text-body-loud"
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload Photo
-                    </Button>
-                    {gptPhoto && <span className="text-body-normal">{gptPhoto.name}</span>}
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="flex justify-between w-full">
-            <Button 
-              onClick={handleSubmit} 
-              className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
-            >
-              Update Configuration
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsEditing(false)} 
-              className="border-blue-24 hover:text-white text-body-normal hover:bg-blue-12"
-            >
-              Cancel
-            </Button>
+        </div>
+        <div>
+          <Label htmlFor="gptInstructions">Instructions</Label>
+          <div className="flex space-x-2">
+            <Select onValueChange={handlePredefinedInstructionChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select style" />
+              </SelectTrigger>
+              <SelectContent>
+                {predefinedInstructions.map((instruction) => (
+                  <SelectItem key={instruction.value} value={instruction.value}>
+                    {instruction.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              id="gptInstructions"
+              value={instructions}
+              onChange={handleInstructionsChange}
+              placeholder="Enter instructions for your GPT"
+              className="flex-grow h-20 min-h-[80px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
+            />
           </div>
-        )}
+        </div>
+        <div>
+          <Label htmlFor="gptInfo">Extracted Information</Label>
+          <Textarea
+            id="gptInfo"
+            value={info}
+            onChange={handleInfoChange}
+            placeholder="Enter extracted information in JSON format"
+            className="w-full h-64 min-h-[256px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
+          />
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between border-t border-blue-24 pt-4">
+        <Button 
+          onClick={onPreviewClick}
+          className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
+        >
+          Preview 
+        </Button>
+        <Button 
+          onClick={handleTrain} 
+          disabled={!enableTraining || isTraining}
+          className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
+        >
+          {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isTraining ? 'Training...' : 'Train Digital Twin'}
+        </Button>
       </CardFooter>
     </Card>
   )
