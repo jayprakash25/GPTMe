@@ -1,0 +1,19 @@
+name = "user-conversation-worker"
+main = "src/worker/index.ts"
+compatibility_date = "2023-10-01"
+
+[vars]
+JWT_SECRET = "jamesbondsociety"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gpt-me"
+database_id = "36ac4e3c-5e90-4607-8ad5-26e040caa29f"
+
+[ai]
+binding = "AI"
+
+# wrangler.toml (wrangler v3.79.0^)
+[observability]
+enabled = true
+head_sampling_rate = 1

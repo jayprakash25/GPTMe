@@ -24,5 +24,6 @@ declare module "next-auth"{
             email?: string;
             picture?: string;
         } & DefaultSession["user"];
+        accessToken?: string;
     }
 }

@@ -42,6 +42,8 @@ export const conversationSchema = z.object({
     max_tokens: z.number(),
     temperature: z.number(),
   }),
+  gptName: z.string(), // New field for GPT name
+  gptPhoto: z.string(), // New field for GPT photo URL
   createdAt: z.date(),
   updatedAt: z.date(),
 });

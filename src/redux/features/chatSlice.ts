@@ -2,6 +2,7 @@
 
 import {createAsyncThunk, createSlice, PayloadAction} from '@reduxjs/toolkit'
 import axios from 'axios'
+import { getSession } from 'next-auth/react'
 
 
 interface Message {
@@ -25,20 +26,62 @@ const initialState: ChatState = {
     conversationStatus: 'in_progress',
 }
 
+const WORKER_URL = process.env.NEXT_PUBLIC_WORKER_URL
+
+const getAuthToken = async () => {
+  const session = await getSession()
+
+  if (!session || !session.accessToken) {
+    console.log('No active session found')
+    throw new Error('No active session found')
+  }
+
+  return session.accessToken
+}
 export const fetchConversationHistory = createAsyncThunk(
-    'chat/fetchConversationHistory',
-    async () => {
-        const response = await axios.post('/api/conversation', {action: 'fetch_history'})
-        return response.data.data
+  'chat/fetchConversationHistory',
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = await getAuthToken()
+      const response = await axios.post(`${WORKER_URL}/api/conversation`, 
+        { action: 'fetch_history' },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+      return response.data.data
+    } catch (error) {
+      return rejectWithValue('Failed to fetch conversation history')
     }
+  }
 )
 
 export const sendMessage = createAsyncThunk(
-    'chat/sendMessage',
-    async (message: string) => {
-        const response = await axios.post('/api/conversation', {message})
-        return response.data.data
+  'chat/sendMessage',
+  async (message: string, { rejectWithValue }) => {
+    try {
+      const token = await getAuthToken()
+      if (!token) {
+        throw new Error('No active session found')
+      }
+
+      console.log('Sending message with token: ', token)
+      const response = await axios.post(`${WORKER_URL}/api/conversation`, 
+        { message },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+      return response.data.data
+    } catch (error) {
+        console.error('Error sending message:', error)
+      return rejectWithValue('Failed to send message')
     }
+  }
 )
 
 const chatSlice = createSlice({

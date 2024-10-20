@@ -1,11 +1,9 @@
-import dbConnection from "@/lib/dbConnect";
-import UserModel from "@/models/User"; // Adjust import to match your model name
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
- 
+import axios from 'axios';
+import jwt from "@tsndr/cloudflare-worker-jwt";
 
 export const authOptions: NextAuthOptions = {
-  
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -15,57 +13,36 @@ export const authOptions: NextAuthOptions = {
           access_type: "offline",
           response_type: "code",
         },
-      },
-    }),
+      }}),
   ],
-  debug: true,
   callbacks: {
-    async redirect({ url, baseUrl }) {
-      console.log('Redirect callback:', { url, baseUrl });
-      return url.startsWith(baseUrl) ? url : baseUrl;
-    },
     async signIn({ account, profile }) {
-      if (account?.provider === "google") {
+      if (account?.provider === "google" && profile?.sub) {
         try {
-          // Step 1: Connect to the database
-          await dbConnection();
+          const checkResponse = await axios.get(
+            `${process.env.NEXT_PUBLIC_WORKER_URL}/api/user/verify?googleId=${profile.sub}`
+          );
 
-          // Step 2: Ensure profile.sub (Google ID) exists
-          if (profile?.sub) {
-            // Step 3: Check if user already exists in the database
-            const existingUser = await UserModel.findOne({
-              googleId: profile.sub,
-            });
-
-            if (!existingUser) {
-              // Step 4: Create a new user if one doesn't exist
-              await UserModel.create({
+          if (!checkResponse.data.data.exists) {
+            const createResponse = await axios.post(
+              `${process.env.NEXT_PUBLIC_WORKER_URL}/api/user`,
+              {
                 googleId: profile.sub,
                 name: profile.name,
                 email: profile.email,
                 picture: profile.picture,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              });
-            } else {
-              // Step 5: Update existing user's details
-              await UserModel.findOneAndUpdate(
-                { googleId: profile.sub },
-                {
-                  name: profile.name,
-                  email: profile.email,
-                  picture: profile.picture,
-                  updatedAt: new Date(), 
-                }
-              );
+                operation: 'upsert'
+              },
+              {
+                headers: { 'Content-Type': 'application/json' }
+              }
+            );
+
+            if (createResponse.status !== 200) {
+              throw new Error('Failed to create user');
             }
-            // Step 6: Allow the sign-in
-            return true;
-          } else {
-            // If Google profile does not contain a sub, deny sign-in
-            console.error("No profile.sub found");
-            return false;
           }
+          return true;
         } catch (error) {
           console.error("Error during sign-in:", error);
           return false;
@@ -73,27 +50,44 @@ export const authOptions: NextAuthOptions = {
       }
       return false;
     },
-    async session({ session, token }) {
-      // Attach user details to the session
-      if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.picture = token.picture;
-      }
-      return session;
-    },
-    async jwt({ token, account, profile }) {
-      // Add additional user info to the JWT token after login
+    async jwt({ token, account, profile}) {
+      // Initial sign in
       if (account?.provider === "google" && profile) {
         token.id = profile.sub;
         token.name = profile.name;
         token.email = profile.email;
         token.picture = profile.picture;
+        token.accessToken = await generateAccessToken(profile as { sub: string; name: string; email: string; picture: string });
+        token.accessTokenExpires = Date.now() + 60 * 60 * 1000; // 1 hour
       }
-      return token;
+
+      // Return previous token if the access token has not expired yet
+      if (Date.now() < (token.accessTokenExpires as number)) {
+        return token;
+      }
+
+      // Access token has expired, regenerate it
+      return {
+        ...token,
+        accessToken: await generateAccessToken({
+          sub: token.id as string,
+          name: token.name as string,
+          email: token.email as string,
+          picture: token.picture as string,
+        }),
+        accessTokenExpires: Date.now() + 60 * 60 * 1000,
+      };
     },
-   
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.name = token.name;
+        session.user.email = token.email;
+        session.user.picture = token.picture as string;
+        session.accessToken = token.accessToken as string;
+      }
+      return session;
+    },
   },
   pages: {
     signIn: "/sign-in",
@@ -104,3 +98,17 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
+async function generateAccessToken(profile: { sub: string; name: string; email: string; picture: string }) {
+  return jwt.sign(
+    {
+      sub: profile.sub,
+      name: profile.name,
+      email: profile.email,
+      picture: profile.picture,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60, // 1 hour
+    },
+    process.env.JWT_SECRET as string
+  );
+}
+
+export default authOptions;
