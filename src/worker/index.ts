@@ -4,6 +4,7 @@ import jwt from "@tsndr/cloudflare-worker-jwt";
 import { D1Database } from "@cloudflare/workers-types";
 import { cors } from "hono/cors";
 import { Context } from "hono";
+import { systemPrompt } from "@/prompts/prompt1";
 
 // Types
 interface Env {
@@ -46,6 +47,7 @@ interface Message {
 }
 
 
+const prompt: string = systemPrompt;
 
 // Type declaration for Hono context with user
 type UserContext = Context<{ Bindings: Env; Variables: { user: JWTPayload } }>;
@@ -404,7 +406,7 @@ async function processMessage(
         "Thank you for the additional information. Your digital twin has been updated.";
       extractedInfo = await extractKeyInfo(ai, messages);
     } else {
-      const systemPrompt = `You are an AI assistant tasked with creating a personalized digital version of a user...`;
+      const systemPrompt = `${prompt}`;
       const augmentedMessages = [
         { role: "system", content: systemPrompt },
         ...messages,
@@ -425,7 +427,7 @@ async function processMessage(
       }
 
       if (
-        aiResponse.toLowerCase().includes("your digital version is now created")
+        aiResponse.toLowerCase().includes("your digital version is created now")
       ) {
         conversation.status = "completed";
         extractedInfo = await extractKeyInfo(ai, messages);
@@ -473,7 +475,24 @@ async function processMessage(
 
 async function extractKeyInfo(ai: Ai, messages: Message[]) {
   const prompt = `
-    Summarize the user's responses into key personal traits, experiences, opinions, and behavioral patterns.
+ Analyze the conversation and provide insights about the user in the following strict markdown structure:
+    
+    # Personal Traits
+    - **Trait:** [trait name]
+      [description]
+    
+    # Experiences
+    - **Experience:** [experience name]
+      [description]
+    
+    # Opinions
+    - **Opinion:** [opinion]
+      [description]
+    
+    # Behavioral Patterns
+    - **Pattern:** [pattern name]
+      [description]
+
     Conversation:
     ${messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n")}
   `;

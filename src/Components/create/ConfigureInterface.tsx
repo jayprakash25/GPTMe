@@ -13,6 +13,7 @@ import { Input } from "@/Components/ui/input"
 import { Label } from "@/Components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select"
 import axios from 'axios'
+import ReactMarkdown from 'react-markdown'
 
 interface ConfigureInterfaceProps {
   onPreviewClick: () => void
@@ -25,8 +26,8 @@ const predefinedInstructions = [
   { value: "detailed", label: "Detailed and Thorough", instruction: "Offer comprehensive responses that cover all aspects of the user's query, providing examples and explanations where necessary." },
 ]
 
-function useDebounce(func: Function, delay: number) {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+function useDebounce(func: (...args: any[]) => void, delay: number) {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const debouncedFunc = useCallback((...args: any[]) => {
     if (timeoutRef.current) {
@@ -213,6 +214,7 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
             placeholder="Enter extracted information in JSON format"
             className="w-full h-64 min-h-[256px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
           />
+         
         </div>
       </CardContent>
       <CardFooter className="flex justify-between border-t border-blue-24 pt-4">
