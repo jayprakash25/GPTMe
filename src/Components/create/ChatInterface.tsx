@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Textarea } from "@/Components/ui/textarea"
-import { Button } from "@/Components/ui/button"
-import { ScrollArea } from "@/Components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar"
-import { Send, User, Paperclip } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Send, User, Paperclip, Plus, Settings, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConversationHistory, sendMessage, addMessage, setConversationStatus } from '@/redux/features/chatSlice'
-import TypingEffect from './TypingEffect'
+import TypingEffect from '@/components/create/TypingEffect'
 
 interface ChatInterfaceProps {
   onConfigureClick: () => void
@@ -96,30 +96,30 @@ export default function ChatInterface({ onConfigureClick }: ChatInterfaceProps) 
   }
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col bg-gradient-to-b from-dark-bg to-blue-6 border border-blue-24 text-body-loud rounded-xl overflow-hidden shadow-lg">
-     
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+    <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-8rem)] flex flex-col bg-zinc-950 border border-zinc-800/50 text-zinc-100 rounded-xl overflow-hidden">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 pt-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
             <div
               key={index}
               className={cn(
-                "flex items-start space-x-2 transition-all duration-300 ease-in-out",
+                "flex items-end space-x-2 transition-all duration-300 ease-in-out",
                 message.role === 'user' ? "justify-end" : "justify-start",
                 "animate-in fade-in-0 slide-in-from-bottom-4"
               )}
             >
               {message.role === 'assistant' && (
-                <Avatar className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 ring-2 ring-blue-90">
+                <Avatar className="w-8 h-8 bg-zinc-800 ring-1 ring-zinc-700/50">
                   <AvatarFallback>AI</AvatarFallback>
                   <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
                 </Avatar>
               )}
               <div className={cn(
-                "max-w-[70%] p-3 rounded-lg shadow-md",
-                message.role === 'user' ? "bg-blue-24 text-body-loud" : " text-body-normal",
-                "transform transition-all duration-300 ease-in-out hover:scale-[1.02]",
-                "border border-blue-90/30"
+                "max-w-[80%] sm:max-w-[70%] p-3 rounded-xl",
+                message.role === 'user' 
+                  ? "bg-indigo-500/10 text-indigo-100 border border-indigo-500/20" 
+                  : "bg-zinc-800/50 text-zinc-100 border border-zinc-700/50",
+                "transform transition-all duration-300 ease-in-out hover:scale-[1.02]"
               )}>
                 {message.role === 'assistant' && message.isNew ? (
                   <TypingEffect text={message.content} />
@@ -128,64 +128,82 @@ export default function ChatInterface({ onConfigureClick }: ChatInterfaceProps) 
                 )}
               </div>
               {message.role === 'user' && (
-                <Avatar className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 ring-2 ring-blue-90">
+                <Avatar className="w-8 h-8 bg-zinc-800 ring-1 ring-zinc-700/50">
                   <AvatarFallback>
-                    <User className="w-4" />
+                    <User className="w-4 h-4 text-zinc-300" />
                   </AvatarFallback>
                 </Avatar>
               )}
             </div>
           ))}
+          
+          {isTyping && (
+            <div className="flex items-end space-x-2">
+              <Avatar className="w-8 h-8 bg-zinc-800 ring-1 ring-zinc-700/50">
+                <AvatarFallback>AI</AvatarFallback>
+                <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
+              </Avatar>
+              <div className="max-w-[80%] sm:max-w-[70%] p-3 rounded-xl bg-zinc-800/50 text-zinc-100 border border-zinc-700/50">
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+                  <span className="text-sm text-zinc-400">GPTMe is thinking...</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-      <div className="border-t border-blue-24 bg-gradient-to-t from-blue-12 to-blue-6 p-4">
+      
+      <div className="border-t border-zinc-800/50 bg-zinc-900/30 p-4">
         {conversationStatus === 'completed' ? (
-          <div className="flex justify-between">
+          <div className="flex items-center gap-2">
             <Button 
               onClick={handleAddNewInfo} 
-              className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 hover:text-black shadow-lg hover:shadow-blue-90/50 px-3 py-1 text-sm"
+              variant="ghost"
+              className="flex-1 bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-200 h-10"
             >
-              Add Info
+              <Plus className="w-4 h-4 mr-2" />
+              Add Information
             </Button>
             <Button 
               onClick={onConfigureClick} 
-              className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-all duration-200 shadow-lg hover:text-black hover:shadow-blue-90/50 px-3 py-1 text-sm"
+              variant="ghost"
+              className="flex-1 bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-200 h-10"
             >
+              <Settings className="w-4 h-4 mr-2" />
               Configure
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSend} className="flex space-x-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message..."
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none bg-blue-12 text-body-loud border-blue-24 focus:border-blue-90 focus:ring-1 focus:ring-blue-90 placeholder-body-muted rounded-lg transition-all duration-200 shadow-inner"
-              disabled={isTyping}
-            />
-            <div className="flex flex-col space-y-2">
-              <Button
-                type="button"
-                size="icon"
-                onClick={handleAttachFile}
-                className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-colors duration-200 focus:ring-2 focus:ring-blue-90 shadow-lg hover:shadow-blue-90/50"
-                aria-label="Attach file"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button 
-                type="submit" 
-                size="icon" 
-                disabled={!input.trim() || isTyping}
-                className="bg-blue-24 hover:bg-blue-90 text-body-loud transition-colors duration-200 focus:ring-2 focus:ring-blue-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-90/50"
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+          <form onSubmit={handleSend} className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                className="w-full min-h-[40px] max-h-[120px] py-2.5 px-4 resize-none 
+                  bg-zinc-800/50 hover:bg-zinc-700/50 focus:bg-zinc-700/80 
+                  text-zinc-100 border-0 focus:ring-1 focus:ring-indigo-500/50 
+                  placeholder-zinc-400 rounded-lg transition-all duration-200"
+                disabled={isTyping}
+              />
             </div>
+            <Button 
+              type="submit" 
+              size="icon"
+              disabled={!input.trim() || isTyping}
+              className="h-10 w-10 bg-indigo-500/10 hover:bg-indigo-500/20 
+                text-indigo-200 border border-indigo-500/20
+                transition-colors duration-200 
+                disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
           </form>
         )}
       </div>

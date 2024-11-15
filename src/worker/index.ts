@@ -427,7 +427,7 @@ async function processMessage(
       }
 
       if (
-        aiResponse.toLowerCase().includes("your digital version is created now")
+        aiResponse.toLowerCase().includes("let's move to the next step")
       ) {
         conversation.status = "completed";
         extractedInfo = await extractKeyInfo(ai, messages);

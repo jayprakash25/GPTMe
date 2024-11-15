@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Button } from "@/Components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/Components/ui/card"
-import { Input } from "@/Components/ui/input"
-import { MessageCircle, Send, Loader2, User } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { MessageCircle, Send, Loader2, User, Settings } from "lucide-react"
+import { cn } from "@/lib/utils"
 import axios from 'axios'
 import { useToast } from "@/hooks/use-toast"
-import { ScrollArea } from "@/Components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/Components/ui/avatar"
+import { Textarea } from "@/components/ui/textarea"
+import TypingEffect from '@/components/create/TypingEffect'
 
 interface PreviewSectionProps {
   onEditConfigClick: () => void
@@ -16,36 +17,44 @@ interface PreviewSectionProps {
 
 export default function PreviewSection({ onEditConfigClick }: PreviewSectionProps) {
   const [isTestingConversation, setIsTestingConversation] = useState(false)
-  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
+  const [messages, setMessages] = useState<Array<{ role: string; content: string; isNew?: boolean }>>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
   useEffect(() => {
-    if (isTestingConversation) {
-      scrollToBottom()
-      inputRef.current?.focus()
+    scrollToBottom()
+  }, [messages])
+
+  const adjustTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`
     }
-  }, [isTestingConversation, messages])
+  }
 
   const handleTestConversation = () => {
     setIsTestingConversation(true)
-    setMessages([{ role: 'assistant', content: 'Hello! How can I assist you today?' }])
+    setMessages([{ 
+      role: 'assistant', 
+      content: 'Hello! How can I assist you today?',
+      isNew: true 
+    }])
   }
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
     if (!inputMessage.trim() || isLoading) return
 
     const userMessage = { role: 'user', content: inputMessage }
-    setMessages(prevMessages => [...prevMessages, userMessage])
+    setMessages(prev => [...prev, userMessage])
     setInputMessage('')
     setIsLoading(true)
 
@@ -57,9 +66,10 @@ export default function PreviewSection({ onEditConfigClick }: PreviewSectionProp
       if (response.data.statusCode === 200 && response.data.data) {
         const assistantMessage = { 
           role: 'assistant', 
-          content: response.data.data.choices[0].message.content
+          content: response.data.data.choices[0].message.content,
+          isNew: true
         }
-        setMessages(prevMessages => [...prevMessages, assistantMessage])
+        setMessages(prev => [...prev, assistantMessage])
       } else {
         throw new Error('Invalid response from server')
       }
@@ -75,109 +85,144 @@ export default function PreviewSection({ onEditConfigClick }: PreviewSectionProp
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage(e)
+    }
+  }
+
   return (
-    <Card className="w-full h-[calc(100vh-8rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
-      <CardHeader className="border-b border-blue-24 px-6 py-4">
-        <CardTitle className="text-2xl font-bold flex items-center text-body-loud">
-          <Avatar className="w-8 h-8 mr-2">
-            <AvatarImage src={''} alt={''} />
-            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold">
-              { '?'}
-            </AvatarFallback>
+    <div className="h-[calc(100vh-4rem)] sm:h-[calc(100vh-8rem)] flex flex-col bg-zinc-950 border border-zinc-800/50 text-zinc-100 rounded-xl overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-zinc-800/50 bg-zinc-900/30 px-4 py-3">
+        <div className="flex items-center space-x-3">
+          <Avatar className="h-8 w-8 bg-zinc-800 ring-1 ring-zinc-700/50">
+            <AvatarFallback>AI</AvatarFallback>
+            <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
           </Avatar>
-          { 'Unnamed Avatar'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col flex-grow p-0 overflow-hidden">
+          <div className="flex-1">
+            <h2 className="text-sm font-semibold text-zinc-100">Digital Twin Preview</h2>
+            <p className="text-xs text-zinc-400">Test your AI's responses</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Area */}
+      <ScrollArea className="flex-1 px-4 py-4">
         {!isTestingConversation ? (
-          <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
-            <Avatar className="w-24 h-24">
-              <AvatarImage src={''} alt={''} />
-              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-4xl font-bold">
-                {'?'}
-              </AvatarFallback>
+          <div className="h-full flex flex-col items-center justify-center space-y-4 p-4">
+            <Avatar className="h-16 w-16 bg-zinc-800 ring-1 ring-zinc-700/50">
+              <AvatarFallback>AI</AvatarFallback>
+              <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
             </Avatar>
-            <h2 className="text-2xl font-bold">{'Unnamed Avatar'}</h2>
-            <p className="text-center text-gray-400">
-              {`Interests: `}
-            </p>
-            <p className="text-center text-gray-400">
-              {`Personality:`}
-            </p>
-            <Button 
-              onClick={handleTestConversation} 
-              className="mt-4 bg-blue-24 hover:bg-blue-90 text-body-loud"
-            >
-              Start Conversation
-              <MessageCircle className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              onClick={onEditConfigClick}
-              className="mt-2 bg-blue-24 hover:bg-blue-90 text-body-loud"
-            >
-              Edit Configuration
-            </Button>
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold text-zinc-100">Ready to Test</h3>
+              <p className="text-sm text-zinc-400">Start a conversation to test your digital twin</p>
+            </div>
+            <div className="flex flex-col gap-2 w-full max-w-xs">
+              <Button
+                onClick={handleTestConversation}
+                className="w-full bg-indigo-500/10 hover:bg-indigo-500/20 
+                  text-indigo-200 border border-indigo-500/20"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Start Conversation
+              </Button>
+              <Button
+                onClick={onEditConfigClick}
+                variant="ghost"
+                className="w-full bg-zinc-800/50 hover:bg-zinc-700/50 text-zinc-200"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Edit Configuration
+              </Button>
+            </div>
           </div>
         ) : (
-          <ScrollArea className="flex-grow px-6 py-4">
-            <div ref={scrollAreaRef}>
-              {messages.map((message, index) => (
-                <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-                  <div className={`flex items-start space-x-2 max-w-[70%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    {message.role === 'assistant' ? (
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={''} alt={''} />
-                        <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold">
-                          {'?'}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                        <User className="h-4 w-4 text-gray-100" />
-                      </div>
-                    )}
-                    <div className={`p-3 rounded-lg ${
-                      message.role === 'user' 
-                        ? 'bg-blue-24 text-body-loud' 
-                        : 'bg-blue-12 text-body-normal'
-                    }`}>
-                      {message.content}
-                    </div>
-                  </div>
+          <div className="space-y-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-end space-x-2 transition-all duration-300 ease-in-out",
+                  message.role === 'user' ? "justify-end" : "justify-start",
+                  "animate-in fade-in-0 slide-in-from-bottom-4"
+                )}
+              >
+                {message.role === 'assistant' && (
+                  <Avatar className="w-8 h-8 bg-zinc-800 ring-1 ring-zinc-700/50">
+                    <AvatarFallback>AI</AvatarFallback>
+                    <AvatarImage src="/ai-avatar.png" alt="AI Avatar" />
+                  </Avatar>
+                )}
+                <div className={cn(
+                  "max-w-[80%] sm:max-w-[70%] p-3 rounded-xl",
+                  message.role === 'user' 
+                    ? "bg-indigo-500/10 text-indigo-100 border border-indigo-500/20" 
+                    : "bg-zinc-800/50 text-zinc-100 border border-zinc-700/50",
+                  "transform transition-all duration-300 ease-in-out hover:scale-[1.02]"
+                )}>
+                  {message.role === 'assistant' && message.isNew ? (
+                    <TypingEffect text={message.content} />
+                  ) : (
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
-        )}
-        {isTestingConversation && (
-          <div className="p-4 border-t border-blue-24">
-            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex space-x-2">
-              <Input
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your message..."
-                disabled={isLoading}
-                className="flex-grow bg-blue-12 text-body-normal border-blue-24 focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
-              />
-              <Button type="submit" disabled={isLoading} className="bg-blue-24 hover:bg-blue-90 text-body-loud">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </form>
+                {message.role === 'user' && (
+                  <Avatar className="w-8 h-8 bg-zinc-800 ring-1 ring-zinc-700/50">
+                    <AvatarFallback>
+                      <User className="w-4 h-4 text-zinc-300" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
         )}
-      </CardContent>
+      </ScrollArea>
+
+      {/* Input Area */}
       {isTestingConversation && (
-        <CardFooter className="border-t border-blue-24 p-4">
-          <Button
-            onClick={onEditConfigClick}
-            className="w-full bg-blue-24 hover:bg-blue-90 text-body-loud"
-          >
-            Not satisfied? Edit Configuration
-          </Button>
-        </CardFooter>
+        <div className="border-t border-zinc-800/50 bg-zinc-900/30 p-4">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={inputMessage}
+                onChange={(e) => {
+                  setInputMessage(e.target.value)
+                  adjustTextareaHeight()
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message..."
+                className="w-full min-h-[40px] max-h-[120px] py-2.5 px-4 resize-none 
+                  bg-zinc-800/50 hover:bg-zinc-700/50 focus:bg-zinc-700/80 
+                  text-zinc-100 border-0 focus:ring-1 focus:ring-indigo-500/50 
+                  placeholder-zinc-400 rounded-lg transition-all duration-200"
+                disabled={isLoading}
+              />
+            </div>
+            <Button 
+              type="submit" 
+              size="icon"
+              disabled={!inputMessage.trim() || isLoading}
+              className="h-10 w-10 bg-indigo-500/10 hover:bg-indigo-500/20 
+                text-indigo-200 border border-indigo-500/20
+                transition-colors duration-200 
+                disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Send message"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
       )}
-    </Card>
-    // </Card>
+    </div>
   )
 }

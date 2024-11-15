@@ -2,16 +2,16 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Textarea } from "@/Components/ui/textarea"
-import { Button } from "@/Components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { useToast } from '@/hooks/use-toast'
 import { RootState, AppDispatch } from '@/redux/store'
 import { fetchConfiguration, updateConfiguration } from '@/redux/features/configSlice'
-import { Card, CardContent, CardFooter } from "@/Components/ui/card"
-import { Loader2 } from "lucide-react"
-import { Input } from "@/Components/ui/input"
-import { Label } from "@/Components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/Components/ui/select"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Loader2, ChevronDown } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import axios from 'axios'
 import ReactMarkdown from 'react-markdown'
 
@@ -152,45 +152,51 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
 
   if (status === 'loading' && !name && !instructions && !info) {
     return (
-      <Card className="w-full h-[75vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <Card className="w-full h-[75vh] flex items-center justify-center bg-gray-900 border-gray-700">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
       </Card>
     )
   }
 
   if (status === 'failed') {
     return (
-      <Card className="w-full h-[75vh] flex items-center justify-center">
+      <Card className="w-full h-[75vh] flex items-center justify-center bg-gray-900 border-gray-700">
         <CardContent>
-          <p className="text-destructive">Error: {error}</p>
+          <p className="text-red-500">Error: {error}</p>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="w-full h-[calc(100vh-12rem)] flex flex-col bg-gradient-bg-6 border-blue-24 text-body-normal">
-      <CardContent className="flex-grow overflow-auto p-4 space-y-4">
+    <Card className="w-full h-[calc(100vh-4rem)] sm:h-[calc(100vh-8rem)] flex flex-col bg-zinc-950 border-zinc-800/50 text-zinc-100 rounded-xl overflow-hidden">
+      <CardContent className="flex-grow overflow-auto p-4 space-y-6">
         <div>
-          <Label htmlFor="gptName">GPT Name</Label>
+          <Label htmlFor="gptName" className="text-sm font-medium text-zinc-300 mb-1 block">GPT Name</Label>
           <Input
             id="gptName"
             value={name}
             onChange={handleNameChange}
             placeholder="Enter GPT name"
-            className="bg-blue-12 text-body-normal border-blue-24"
+            className="w-full bg-zinc-800/50 text-zinc-100 border-zinc-700/50 
+              focus:border-indigo-500/50 focus:ring-indigo-500/20 
+              placeholder-zinc-400 transition-colors duration-200"
           />
         </div>
         <div>
-          <Label htmlFor="gptInstructions">Instructions</Label>
-          <div className="flex space-x-2">
+          <Label htmlFor="gptInstructions" className="text-sm font-medium text-zinc-300 mb-1 block">Instructions</Label>
+          <div className="flex flex-col space-y-2">
             <Select onValueChange={handlePredefinedInstructionChange}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full bg-zinc-800/50 text-zinc-100 border-zinc-700/50 hover:bg-zinc-700/50">
                 <SelectValue placeholder="Select style" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-zinc-900 text-zinc-100 border-zinc-700/50">
                 {predefinedInstructions.map((instruction) => (
-                  <SelectItem key={instruction.value} value={instruction.value}>
+                  <SelectItem 
+                    key={instruction.value} 
+                    value={instruction.value} 
+                    className="hover:bg-zinc-800/50 focus:bg-zinc-800/50"
+                  >
                     {instruction.label}
                   </SelectItem>
                 ))}
@@ -201,33 +207,43 @@ export default function ConfigureInterface({ onPreviewClick }: ConfigureInterfac
               value={instructions}
               onChange={handleInstructionsChange}
               placeholder="Enter instructions for your GPT"
-              className="flex-grow h-20 min-h-[80px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
+              className="w-full h-32 min-h-[128px] p-2 bg-zinc-800/50 
+                text-zinc-100 border-zinc-700/50 rounded-lg 
+                focus:border-indigo-500/50 focus:ring-indigo-500/20 
+                placeholder-zinc-400 resize-none transition-colors duration-200"
             />
           </div>
         </div>
         <div>
-          <Label htmlFor="gptInfo">Extracted Information</Label>
+          <Label htmlFor="gptInfo" className="text-sm font-medium text-zinc-300 mb-1 block">Extracted Information</Label>
           <Textarea
             id="gptInfo"
             value={info}
             onChange={handleInfoChange}
             placeholder="Enter extracted information in JSON format"
-            className="w-full h-64 min-h-[256px] p-2 bg-blue-12 text-body-normal border-blue-24 rounded focus:border-blue-90 focus:ring-1 focus:ring-blue-90"
+            className="w-full h-64 min-h-[256px] p-2 bg-zinc-800/50 
+              text-zinc-100 border-zinc-700/50 rounded-lg 
+              focus:border-indigo-500/50 focus:ring-indigo-500/20 
+              placeholder-zinc-400 resize-none transition-colors duration-200
+              font-mono text-sm"
           />
-         
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between border-t border-blue-24 pt-4">
+      <CardFooter className="flex flex-col sm:flex-row justify-between items-center border-t border-zinc-800/50 bg-zinc-900/30 p-4 space-y-4 sm:space-y-0 sm:space-x-4">
         <Button 
           onClick={onPreviewClick}
-          className="bg-blue-24 hover:text-black hover:bg-blue-90 text-body-loud"
+          className="w-full sm:w-auto bg-zinc-800/50 hover:bg-zinc-700/50 
+            text-zinc-100 border border-zinc-700/50 transition-colors duration-200"
         >
           Preview 
         </Button>
         <Button 
           onClick={handleTrain} 
           disabled={!enableTraining || isTraining}
-          className="bg-blue-24 hover:bg-blue-90 text-body-loud disabled:opacity-50"
+          className="w-full sm:w-auto bg-indigo-500/10 hover:bg-indigo-500/20 
+            text-indigo-200 border border-indigo-500/20
+            transition-colors duration-200 
+            disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {isTraining ? 'Training...' : 'Train Digital Twin'}
